@@ -727,6 +727,44 @@ export default function Home() {
         .toast-icon { font-size:1.2rem; }
         .toast-text { font-size:.85rem; line-height:1.4; }
         .toast-title { font-family:'Syne',sans-serif; font-weight:700; color:var(--green); margin-bottom:2px; }
+
+        /* ── STAGGERED WAVES ── */
+        .waves {
+          position:relative;
+          width: 100%;
+          height:80px;
+          margin-bottom:-10px;
+          min-height:60px;
+          max-height:100px;
+        }
+
+        .parallax > use {
+          animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite;
+        }
+        .parallax > use:nth-child(1) {
+          animation-delay: -2s;
+          animation-duration: 7s;
+        }
+        .parallax > use:nth-child(2) {
+          animation-delay: -3s;
+          animation-duration: 10s;
+        }
+        .parallax > use:nth-child(3) {
+          animation-delay: -4s;
+          animation-duration: 13s;
+        }
+        .parallax > use:nth-child(4) {
+          animation-delay: -5s;
+          animation-duration: 20s;
+        }
+        @keyframes move-forever {
+          0% {
+            transform: translate3d(-90px,0,0);
+          }
+          100% { 
+            transform: translate3d(85px,0,0);
+          }
+        }
       ` }} />
 
       {/* NAV */}
@@ -1088,6 +1126,22 @@ export default function Home() {
           <Link href="/login" className="btn-ghost btn-large" style={{ padding: '14px 32px', fontSize: '1rem' }}>Doctor / Clinic Login</Link>
         </div>
       </section>
+
+      {/* STAGGERED CSS WAVES */}
+      <div style={{ position: 'relative', width: '100%', overflow: 'hidden', height: '80px', marginBottom: '-2px', zIndex: 1 }}>
+        <svg className="waves" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
+          viewBox="0 24 150 28" preserveAspectRatio="none" shapeRendering="auto" style={{ width: '100%', height: '80px' }}>
+          <defs>
+            <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+          </defs>
+          <g className="parallax">
+            <use xlinkHref="#gentle-wave" x="48" y="0" fill="rgba(0, 200, 255, 0.08)" />
+            <use xlinkHref="#gentle-wave" x="48" y="3" fill="rgba(59, 130, 246, 0.12)" />
+            <use xlinkHref="#gentle-wave" x="48" y="5" fill="rgba(139, 92, 246, 0.18)" />
+            <use xlinkHref="#gentle-wave" x="48" y="7" fill="var(--bg2)" />
+          </g>
+        </svg>
+      </div>
 
       {/* FOOTER */}
       <footer>
