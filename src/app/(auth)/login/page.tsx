@@ -90,13 +90,19 @@ export default function LoginPage() {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupRole, setSignupRole] = useState<'patient' | 'doctor'>('patient');
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) return;
     
     alert(`Authentication success! Logging in as: ${loginEmail}`);
-    window.location.href = '/patient';
+    // Simulate redirection to appropriate dashboard based on login email prefix or mockup default
+    if (loginEmail.toLowerCase().includes('doctor') || loginEmail.toLowerCase().includes('practitioner')) {
+      window.location.href = '/doctor';
+    } else {
+      window.location.href = '/patient';
+    }
   };
 
   const handleSignupSubmit = (e: React.FormEvent) => {
@@ -108,7 +114,7 @@ export default function LoginPage() {
       return;
     }
     
-    alert(`Registration success! Welcome: ${signupName}. Please log in.`);
+    alert(`Registration success! Registered ${signupName} as a ${signupRole.toUpperCase()}. Please log in.`);
     // Autofill signup email and switch to login view
     setLoginEmail(signupEmail);
     setIsSignUp(false);
@@ -118,6 +124,7 @@ export default function LoginPage() {
     setSignupEmail('');
     setSignupPassword('');
     setSignupConfirmPassword('');
+    setSignupRole('patient');
   };
 
   return (
@@ -199,6 +206,56 @@ export default function LoginPage() {
                   }}
                   className="focus:border-[#8b5cf6]"
                 />
+              </div>
+
+              {/* Role Segmented Selector */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: 700, letterSpacing: '0.03em' }}>
+                  Register As
+                </span>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  background: '#111317',
+                  padding: '4px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.06)'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setSignupRole('patient')}
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: signupRole === 'patient' ? '#8b5cf6' : 'transparent',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                  >
+                    Patient
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSignupRole('doctor')}
+                    style={{
+                      padding: '0.6rem',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: signupRole === 'doctor' ? '#8b5cf6' : 'transparent',
+                      color: '#ffffff',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                  >
+                    Doctor
+                  </button>
+                </div>
               </div>
 
               {/* Email input */}
