@@ -32,6 +32,22 @@ export interface LabValue {
   comparison: 'Low' | 'Normal' | 'High';
 }
 
+export interface AnomalyRegion {
+  label: string;
+  probability: number;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  description: string;
+}
+
+export interface DifferentialDiagnosis {
+  condition: string;
+  probability: number;
+}
+
 export interface AnalyzeResultPayload {
   patient_name: string;
   extracted_vitals: Record<string, string>;
@@ -43,6 +59,10 @@ export interface AnalyzeResultPayload {
   document_hash: string;
   pipeline_mode: 'live_gemini_vision' | 'simulated_fallback';
   status: string;
+  scan_type?: string;
+  overall_impression?: string;
+  anomaly_regions?: AnomalyRegion[];
+  differential_diagnoses?: DifferentialDiagnosis[];
 }
 
 export interface JobStatusResponse {
@@ -71,14 +91,37 @@ export async function uploadAndAnalyzeReport(
     const filePath = `reports/${uniqueFileName}`;
 
     console.log(`[MediScan-Ai API] Commencing upload of ${file.name} to Supabase bucket 'medical-records'...`);
-    
-    // 1. Upload the raw file to Supabase storage bucket named 'medical-records'
-    const { data, error } = await supabase.storage
-      .from('medical-records')
-      .upload(filePath, file, {
+
+    /**
+     * Self-Healing Bucket Upload:
+     * Attempt the upload, and if the bucket is missing (Supabase error code 'Bucket not found'),
+     * auto-create it as a public bucket and retry once — no manual dashboard setup required.
+     */
+    const attemptUpload = async () =>
+      supabase.storage.from('medical-records').upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
       });
+
+    let { data, error } = await attemptUpload();
+
+    if (error && (error.message?.includes('Bucket not found') || error.message?.includes('bucket') || (error as any)?.statusCode === 404 || (error as any)?.error === 'Bucket not found')) {
+      console.warn('[MediScan-Ai API] Bucket "medical-records" not found. Auto-creating public bucket...');
+      // Create the bucket — ignore error if it was already created by a concurrent request
+      const { error: bucketErr } = await supabase.storage.createBucket('medical-records', {
+        public: true,
+        fileSizeLimit: 52428800, // 50 MB
+        allowedMimeTypes: ['image/*', 'application/pdf'],
+      });
+      if (bucketErr && !bucketErr.message?.includes('already exists') && !bucketErr.message?.includes('duplicate')) {
+        console.warn('[MediScan-Ai API] Bucket creation warning (may already exist):', bucketErr.message);
+      } else {
+        console.log('[MediScan-Ai API] Bucket "medical-records" created successfully. Retrying upload...');
+      }
+      // Retry the upload after bucket creation
+      ({ data, error } = await attemptUpload());
+    }
+
 
     if (error) {
       throw new Error(`Supabase Storage upload failed: ${error.message}`);

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { AnomalyRegion, DifferentialDiagnosis } from '@/lib/api';
 import Link from 'next/link';
 import { uploadAndAnalyzeReport, getJobStatus, AnalyzeResultPayload } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -102,8 +103,20 @@ export default function PatientWorkspace() {
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<{ name: string; type: string } | null>(null);
   const [realAnalysisResult, setRealAnalysisResult] = useState<AnalyzeResultPayload | null>(null);
+  const [uploadedObjectUrl, setUploadedObjectUrl] = useState<string | null>(null);
+  const [hoveredRegionIdx, setHoveredRegionIdx] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const prevObjectUrlRef = useRef<string | null>(null);
+
+  // Cleanup object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (prevObjectUrlRef.current) {
+        URL.revokeObjectURL(prevObjectUrlRef.current);
+      }
+    };
+  }, []);
 
   const steps = [
     'Initializing secure document gateway...',
@@ -147,6 +160,12 @@ export default function PatientWorkspace() {
     setIsScanning(false);
     setScanLogs([]);
     setUploadedFile(null);
+    setHoveredRegionIdx(null);
+    if (prevObjectUrlRef.current) {
+      URL.revokeObjectURL(prevObjectUrlRef.current);
+      prevObjectUrlRef.current = null;
+    }
+    setUploadedObjectUrl(null);
   };
 
   const handleStartAnalysis = () => {
@@ -184,7 +203,16 @@ export default function PatientWorkspace() {
     setSelectedScan(null);
     setRealAnalysisResult(null);
     setIsAnalysisComplete(false);
+    setHoveredRegionIdx(null);
     setScanLogs(['Initializing secure connection...', 'Sealing file cryptographically...']);
+
+    // Create object URL for immediate image preview
+    if (prevObjectUrlRef.current) {
+      URL.revokeObjectURL(prevObjectUrlRef.current);
+    }
+    const objUrl = URL.createObjectURL(file);
+    prevObjectUrlRef.current = objUrl;
+    setUploadedObjectUrl(objUrl);
     
     try {
       // 1. Upload to Supabase & Handoff to FastAPI Async Queue (via our API client) with symptoms
@@ -544,139 +572,153 @@ export default function PatientWorkspace() {
 
               <h3 style={{ fontSize: '1.25rem' }}>{selectedScan.name}</h3>
 
-              {/* Scanning Image Preview */}
-              <div className="scanning-container" style={{
-                position: 'relative',
-                height: '240px',
-                backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${selectedScan.imageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {isScanning && <div className="scanning-bar" />}
-                
-                {!isScanning && !isAnalysisComplete && (
-                  <div style={{
-                    background: 'rgba(6, 9, 19, 0.8)',
-                    backdropFilter: 'blur(4px)',
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    textAlign: 'center',
-                    border: '1px solid var(--border-color)',
-                    maxWidth: '85%'
-                  }}>
-                    <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>Click analyze to invoke deep clinical scan neural network</p>
-                    <button className="btn-primary" onClick={handleStartAnalysis}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                      </svg>
-                      Analyze Scan
-                    </button>
-                  </div>
-                )}
+              {/* === SCAN ANNOTATION OVERLAY === */}
+              {(() => {
+                // Collect anomaly regions from real result or synthesise from preset for presets
+                const regions: AnomalyRegion[] = realAnalysisResult?.anomaly_regions ?? [];
+                // Use uploaded object URL for real uploads, preset imageUrl for presets
+                const displayImageUrl = uploadedObjectUrl ?? selectedScan.imageUrl;
+                const confScore = realAnalysisResult
+                  ? (realAnalysisResult.confidence_score * 100).toFixed(1) + '%'
+                  : selectedScan.confidence;
 
-                {isAnalysisComplete && (
-                  <>
-                    <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      background: 'rgba(16, 185, 129, 0.95)',
-                      color: '#060913',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      boxShadow: '0 0 10px rgba(16, 185, 129, 0.3)',
-                      zIndex: 10
-                    }}>
-                      {realAnalysisResult ? `${(realAnalysisResult.confidence_score * 100).toFixed(1)}%` : selectedScan.confidence} CONFIDENCE
-                    </div>
+                // Severity-based colour tokens
+                const severityColor = (sev: string) => ({
+                  critical: { border: '#ef4444', glow: 'rgba(239,68,68,0.45)', text: '#f87171', bg: 'rgba(239,68,68,0.06)' },
+                  high:     { border: '#f97316', glow: 'rgba(249,115,22,0.40)', text: '#fb923c', bg: 'rgba(249,115,22,0.06)' },
+                  medium:   { border: '#f59e0b', glow: 'rgba(245,158,11,0.40)', text: '#fbbf24', bg: 'rgba(245,158,11,0.06)' },
+                  low:      { border: '#10b981', glow: 'rgba(16,185,129,0.35)', text: '#34d399', bg: 'rgba(16,185,129,0.05)' },
+                }[sev] ?? { border: '#60a5fa', glow: 'rgba(96,165,250,0.35)', text: '#93c5fd', bg: 'rgba(96,165,250,0.06)' });
 
-                    {/* Floating Anomaly Highlight Box Overlay */}
-                    <div style={{
-                      position: 'absolute',
-                      border: '2px dashed ' + (selectedScan.severity === 'high' ? 'rgba(239, 68, 68, 0.8)' : selectedScan.severity === 'medium' ? 'rgba(245, 158, 11, 0.8)' : 'rgba(16, 185, 129, 0.8)'),
-                      borderRadius: '8px',
-                      boxShadow: '0 0 15px ' + (selectedScan.severity === 'high' ? 'rgba(239, 68, 68, 0.4)' : selectedScan.severity === 'medium' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(16, 185, 129, 0.4)'),
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      backdropFilter: 'blur(1px)',
-                      animation: 'pulse-glow 2s infinite ease-in-out, fadeIn 0.8s ease-out',
-                      pointerEvents: 'auto',
-                      cursor: 'pointer',
-                      zIndex: 5,
-                      
-                      // Coordinates determined by preset scan types or dynamically for user uploads
-                      top: selectedScan.id === 'brain-mri' ? '35%'
-                           : selectedScan.id === 'chest-xray' ? '38%'
-                           : selectedScan.id === 'knee-ct' ? '45%'
-                           : '35%',
-                      left: selectedScan.id === 'brain-mri' ? '28%'
-                            : selectedScan.id === 'chest-xray' ? '58%'
-                            : selectedScan.id === 'knee-ct' ? '46%'
-                            : '52%',
-                      width: selectedScan.id === 'brain-mri' ? '70px'
-                             : selectedScan.id === 'chest-xray' ? '90px'
-                             : selectedScan.id === 'knee-ct' ? '75px'
-                             : '80px',
-                      height: selectedScan.id === 'brain-mri' ? '70px'
-                              : selectedScan.id === 'chest-xray' ? '100px'
-                              : selectedScan.id === 'knee-ct' ? '75px'
-                              : '80px',
-                    }}
-                    className="anomaly-highlight-box"
-                    title="Anatomical Anomaly Region identified by AI diagnostics"
-                    >
-                      {/* Target indicator corners */}
-                      <div style={{ position: 'absolute', top: '-4px', left: '-4px', width: '8px', height: '8px', borderLeft: '2px solid currentColor', borderTop: '2px solid currentColor', color: selectedScan.severity === 'high' ? '#f87171' : selectedScan.severity === 'medium' ? '#fbbf24' : '#34d399' }} />
-                      <div style={{ position: 'absolute', top: '-4px', right: '-4px', width: '8px', height: '8px', borderRight: '2px solid currentColor', borderTop: '2px solid currentColor', color: selectedScan.severity === 'high' ? '#f87171' : selectedScan.severity === 'medium' ? '#fbbf24' : '#34d399' }} />
-                      <div style={{ position: 'absolute', bottom: '-4px', left: '-4px', width: '8px', height: '8px', borderLeft: '2px solid currentColor', borderBottom: '2px solid currentColor', color: selectedScan.severity === 'high' ? '#f87171' : selectedScan.severity === 'medium' ? '#fbbf24' : '#34d399' }} />
-                      <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '8px', height: '8px', borderRight: '2px solid currentColor', borderBottom: '2px solid currentColor', color: selectedScan.severity === 'high' ? '#f87171' : selectedScan.severity === 'medium' ? '#fbbf24' : '#34d399' }} />
-                      
-                      {/* Floating Indicator Label */}
+                const NUMERALS = ['①','②','③','④','⑤','⑥','⑦','⑧'];
+
+                return (
+                  <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', background: '#0a0d18' }}>
+                    {/* Base Image */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={displayImageUrl}
+                      alt="Medical scan"
+                      style={{ width: '100%', height: '260px', objectFit: 'cover', display: 'block', filter: isAnalysisComplete ? 'brightness(0.78)' : 'brightness(0.6)' }}
+                    />
+
+                    {/* Scanning animation bar */}
+                    {isScanning && <div className="scanning-bar" />}
+
+                    {/* Pre-analysis call-to-action overlay */}
+                    {!isScanning && !isAnalysisComplete && (
                       <div style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%) translateY(-8px)',
-                        background: '#060913',
-                        border: '1px solid ' + (selectedScan.severity === 'high' ? '#ef4444' : selectedScan.severity === 'medium' ? '#f59e0b' : '#10b981'),
-                        borderRadius: '6px',
-                        padding: '3px 8px',
-                        whiteSpace: 'nowrap',
-                        fontSize: '0.65rem',
-                        fontWeight: 800,
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(6,9,19,0.55)', backdropFilter: 'blur(2px)'
                       }}>
-                        <span style={{
-                          width: '5px',
-                          height: '5px',
-                          borderRadius: '50%',
-                          backgroundColor: selectedScan.severity === 'high' ? '#ef4444' : selectedScan.severity === 'medium' ? '#f59e0b' : '#10b981',
-                          display: 'inline-block',
-                          animation: 'pulse 1s infinite'
-                        }} />
-                        <span style={{ textTransform: 'capitalize' }}>
-                          {selectedScan.id === 'brain-mri' ? 'Microvascular Changes'
-                           : selectedScan.id === 'chest-xray' ? 'Lobar Pneumonia'
-                           : selectedScan.id === 'knee-ct' ? 'ACL Joint Tear'
-                           : (realAnalysisResult?.diagnoses?.[0]?.substring(0, 22) || 'Consolidation / Lesion')}
-                        </span>
-                        <span style={{ color: selectedScan.severity === 'high' ? '#f87171' : selectedScan.severity === 'medium' ? '#fbbf24' : '#34d399', fontWeight: 900 }}>
-                          {realAnalysisResult ? `${(realAnalysisResult.confidence_score * 100).toFixed(1)}%` : selectedScan.confidence}
-                        </span>
+                        <div style={{ background: 'rgba(6,9,19,0.88)', backdropFilter: 'blur(8px)', padding: '1.5rem 2rem', borderRadius: '14px', textAlign: 'center', border: '1px solid var(--border-color)', maxWidth: '85%' }}>
+                          <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.85rem' }}>Click analyze to invoke deep clinical scan neural network</p>
+                          <button className="btn-primary" onClick={handleStartAnalysis}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Analyze Scan
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                    )}
+
+                    {/* Confidence badge */}
+                    {isAnalysisComplete && (
+                      <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(16,185,129,0.92)', color: '#060913', padding: '4px 10px', borderRadius: '6px', fontWeight: 700, fontSize: '0.78rem', boxShadow: '0 0 10px rgba(16,185,129,0.35)', zIndex: 20 }}>
+                        {confScore} CONFIDENCE
+                      </div>
+                    )}
+
+                    {/* Scan type badge */}
+                    {isAnalysisComplete && realAnalysisResult?.scan_type && (
+                      <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(6,9,19,0.85)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '3px 9px', borderRadius: '6px', fontWeight: 700, fontSize: '0.7rem', zIndex: 20 }}>
+                        {realAnalysisResult.scan_type}
+                      </div>
+                    )}
+
+                    {/* Dynamic anomaly region boxes */}
+                    {isAnalysisComplete && regions.map((region, idx) => {
+                      const c = severityColor(region.severity);
+                      const isHovered = hoveredRegionIdx === idx;
+                      return (
+                        <div
+                          key={idx}
+                          onMouseEnter={() => setHoveredRegionIdx(idx)}
+                          onMouseLeave={() => setHoveredRegionIdx(null)}
+                          style={{
+                            position: 'absolute',
+                            left: `${region.x * 100}%`,
+                            top: `${region.y * 100}%`,
+                            width: `${region.width * 100}%`,
+                            height: `${region.height * 100}%`,
+                            border: `2px dashed ${c.border}`,
+                            borderRadius: '6px',
+                            background: isHovered ? c.bg : 'transparent',
+                            boxShadow: isHovered ? `0 0 18px ${c.glow}` : `0 0 8px ${c.glow}`,
+                            animation: 'pulse-glow 2.4s infinite ease-in-out, fadeIn 0.6s ease-out',
+                            cursor: 'pointer',
+                            zIndex: 10 + idx,
+                            transition: 'background 0.2s, box-shadow 0.2s'
+                          }}
+                          title={region.description}
+                        >
+                          {/* Corner bracket markers */}
+                          {[['top','left'],['top','right'],['bottom','left'],['bottom','right']].map(([v,h]) => (
+                            <div key={v+h} style={{
+                              position:'absolute',[v]:'-4px',[h]:'-4px',
+                              width:'10px',height:'10px',
+                              borderTop: v==='top' ? `2px solid ${c.border}` : 'none',
+                              borderBottom: v==='bottom' ? `2px solid ${c.border}` : 'none',
+                              borderLeft: h==='left' ? `2px solid ${c.border}` : 'none',
+                              borderRight: h==='right' ? `2px solid ${c.border}` : 'none',
+                            }}/>
+                          ))}
+
+                          {/* Numeral index badge */}
+                          <div style={{
+                            position:'absolute', top:'-1px', left:'-1px',
+                            background: c.border, color:'#060913',
+                            fontWeight:900, fontSize:'0.6rem',
+                            padding:'1px 5px', borderRadius:'4px 0 4px 0',
+                            lineHeight:'1.4'
+                          }}>{NUMERALS[idx] ?? idx+1}</div>
+
+                          {/* Floating label pill */}
+                          <div style={{
+                            position:'absolute', bottom:'100%', left:'50%',
+                            transform: 'translateX(-50%) translateY(-7px)',
+                            background:'rgba(6,9,19,0.95)',
+                            border:`1px solid ${c.border}`,
+                            borderRadius:'6px', padding:'3px 9px',
+                            whiteSpace:'nowrap', fontSize:'0.65rem', fontWeight:800,
+                            color:'#fff', display:'flex', alignItems:'center', gap:'6px',
+                            boxShadow:'0 4px 12px rgba(0,0,0,0.6)', zIndex:30,
+                            pointerEvents:'none'
+                          }}>
+                            <span style={{ width:'5px',height:'5px',borderRadius:'50%',backgroundColor:c.border,display:'inline-block',animation:'pulse 1s infinite' }}/>
+                            <span>{region.label}</span>
+                            <span style={{ color:c.text, fontWeight:900 }}>{(region.probability * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Overall impression bar at bottom */}
+                    {isAnalysisComplete && realAnalysisResult?.overall_impression && (
+                      <div style={{
+                        position:'absolute', bottom:0, left:0, right:0,
+                        background:'linear-gradient(to top, rgba(6,9,19,0.92) 60%, transparent)',
+                        padding:'1.5rem 1rem 0.75rem',
+                        fontSize:'0.72rem', color:'rgba(255,255,255,0.75)',
+                        fontStyle:'italic', lineHeight:'1.4'
+                      }}>
+                        <span style={{ color:'var(--primary)', fontWeight:700, fontStyle:'normal' }}>AI Impression: </span>
+                        {realAnalysisResult.overall_impression}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              {/* === END SCAN ANNOTATION OVERLAY === */}
 
               {/* Scanning Real-time Console Log */}
               {isScanning && (
@@ -939,6 +981,87 @@ export default function PatientWorkspace() {
                     </div>
                   )}
 
+                  {/* === DIFFERENTIAL DIAGNOSIS PROBABILITY PANEL === */}
+                  {realAnalysisResult && realAnalysisResult.differential_diagnoses && realAnalysisResult.differential_diagnoses.length > 0 && (
+                    <div style={{ animation: 'fadeIn 0.6s ease-out' }}>
+                      <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5">
+                          <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+                        </svg>
+                        AI Differential Diagnosis
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {[...realAnalysisResult.differential_diagnoses]
+                          .sort((a, b) => b.probability - a.probability)
+                          .map((diff, idx) => {
+                            const pct = (diff.probability * 100).toFixed(1);
+                            const col = diff.probability > 0.6 ? '#f97316' : diff.probability > 0.3 ? '#f59e0b' : '#10b981';
+                            return (
+                              <div key={idx} style={{ background: `${col}0d`, borderRadius: '10px', padding: '10px 14px', border: `1px solid ${col}33` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{diff.condition}</span>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: col, fontFamily: 'var(--font-mono)' }}>{pct}%</span>
+                                </div>
+                                <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                                  <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${col}, ${col}99)`, borderRadius: '3px', transition: 'width 0.8s ease-out' }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* === ANOMALY REGION LEGEND === */}
+                  {realAnalysisResult && realAnalysisResult.anomaly_regions && realAnalysisResult.anomaly_regions.length > 0 && (
+                    <div style={{ animation: 'fadeIn 0.7s ease-out' }}>
+                      <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        Annotated Region Index
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {realAnalysisResult.anomaly_regions.map((region, idx) => {
+                          const NUMERALS = ['①','②','③','④','⑤','⑥','⑦','⑧'];
+                          const sevColors: Record<string,string> = { critical:'#ef4444', high:'#f97316', medium:'#f59e0b', low:'#10b981' };
+                          const col = sevColors[region.severity] ?? '#60a5fa';
+                          const isActive = hoveredRegionIdx === idx;
+                          return (
+                            <div
+                              key={idx}
+                              onMouseEnter={() => setHoveredRegionIdx(idx)}
+                              onMouseLeave={() => setHoveredRegionIdx(null)}
+                              style={{
+                                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                                background: isActive ? `${col}12` : 'rgba(255,255,255,0.02)',
+                                border: `1px solid ${isActive ? col : 'var(--border-color)'}`,
+                                borderRadius: '10px', padding: '10px 14px', cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <span style={{ fontSize: '1.1rem', fontWeight: 900, color: col, minWidth: '20px', lineHeight: '1.3', flexShrink: 0 }}>
+                                {NUMERALS[idx] ?? idx + 1}
+                              </span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{region.label}</span>
+                                  <span style={{ fontSize: '0.7rem', padding: '1px 7px', borderRadius: '4px', fontWeight: 700, background: `${col}22`, color: col, border: `1px solid ${col}44`, whiteSpace: 'nowrap' }}>
+                                    {(region.probability * 100).toFixed(0)}%
+                                  </span>
+                                  <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', fontWeight: 600, background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                                    {region.severity}
+                                  </span>
+                                </div>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: '1.45', margin: 0 }}>{region.description}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions Row */}
                   <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                     <button className="btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => alert('PDF report is ready to download in clinical environments.')}>
@@ -1031,6 +1154,10 @@ export default function PatientWorkspace() {
         @keyframes pulse-glow {
           0%, 100% { transform: scale(1); opacity: 0.95; }
           50% { transform: scale(1.02); opacity: 1; filter: drop-shadow(0 0 8px currentColor); }
+        }
+        @keyframes grow-bar {
+          from { width: 0%; }
+          to { width: var(--target-width); }
         }
       `}</style>
     </div>
