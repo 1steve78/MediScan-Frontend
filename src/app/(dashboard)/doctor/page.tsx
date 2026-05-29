@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import Logo from '@/components/ui/Logo';
 import { supabase } from '@/lib/supabase';
 import { 
   Activity, 
@@ -275,7 +276,7 @@ export default function DoctorDashboard() {
       <header className="h-16 border-b border-zinc-900 bg-[#08080a] px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded flex items-center justify-center shadow-lg shadow-violet-600/20">
-            <Activity className="w-5 h-5 text-white" />
+            <Logo size={20} className="text-white" />
           </div>
           <h1 className="text-base font-bold tracking-tight text-zinc-100 flex items-center gap-2">
             MediScan AI <span className="text-zinc-500 font-normal">Triage Control</span>

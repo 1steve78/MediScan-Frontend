@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { uploadAndAnalyzeReport, getJobStatus, AnalyzeResultPayload } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import Logo from '@/components/ui/Logo';
 
 // Premium mock scan presets
 interface ScanPreset {
@@ -297,11 +298,7 @@ export default function PatientWorkspace() {
             justifyContent: 'center',
             boxShadow: '0 0 15px var(--primary-glow)'
           }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#060913" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-              <path d="M5 3v4"/>
-              <path d="M3 5h4"/>
-            </svg>
+            <Logo size={24} className="text-[#060913]" />
           </div>
           <div>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.03em' }}>

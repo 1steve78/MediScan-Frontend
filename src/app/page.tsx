@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { submitSymptoms } from '@/lib/api';
+import Logo from '@/components/ui/Logo';
 
 export default function Home() {
   const [symptoms, setSymptoms] = useState<string[]>([]);
@@ -769,8 +770,8 @@ export default function Home() {
 
       {/* NAV */}
       <nav>
-        <div className="nav-logo">
-          <div className="logo-dot"></div>
+        <div className="nav-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Logo size={24} className="text-cyan-400" />
           Medi<span>Scan</span> AI
         </div>
         <ul className="nav-links">
@@ -1145,7 +1146,10 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer>
-        <div className="footer-logo">Medi<span>Scan</span> AI</div>
+        <div className="footer-logo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Logo size={20} className="text-cyan-400" />
+          Medi<span>Scan</span> AI
+        </div>
         <ul className="footer-links">
           <li><Link href="/" className="footer-link">Platform</Link></li>
           <li><Link href="/" className="footer-link">Security</Link></li>

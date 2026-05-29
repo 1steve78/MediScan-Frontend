@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import Logo from '@/components/ui/Logo';
 
 interface PasswordInputProps {
   label: string;
@@ -252,9 +253,7 @@ export default function LoginPage() {
             justifyContent: 'center',
             boxShadow: '0 0 15px var(--cyan-glow)'
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#060913" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-            </svg>
+            <Logo size={18} className="text-[#060913]" />
           </div>
           <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
             MediScan <span style={{ color: 'var(--cyan)' }}>AI</span>
@@ -745,10 +744,7 @@ export default function LoginPage() {
             color: 'rgba(0, 200, 255, 0.05)',
             zIndex: 0
           }}>
-            <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" fill="currentColor" fillOpacity="0.1"/>
-              <circle cx="12" cy="12" r="3" />
-            </svg>
+            <Logo size={90} className="text-cyan-400 opacity-10" />
           </div>
         </div>
 
