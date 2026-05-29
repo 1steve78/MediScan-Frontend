@@ -16,7 +16,7 @@ function PasswordInput({ label, placeholder, value, onChange, id }: PasswordInpu
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
-      <label htmlFor={id} style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: 700, letterSpacing: '0.03em' }}>
+      <label htmlFor={id} style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
         {label}
       </label>
       <div style={{ position: 'relative' }}>
@@ -28,8 +28,8 @@ function PasswordInput({ label, placeholder, value, onChange, id }: PasswordInpu
           onChange={(e) => onChange(e.target.value)}
           required
           style={{
-            background: '#111317',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
             borderRadius: '10px',
             padding: '0.85rem 3rem 0.85rem 1rem',
             color: '#ffffff',
@@ -38,7 +38,7 @@ function PasswordInput({ label, placeholder, value, onChange, id }: PasswordInpu
             width: '100%',
             transition: 'var(--transition-smooth)'
           }}
-          className="focus:border-[#8b5cf6]"
+          className="focus:border-[var(--cyan)]"
         />
         <button 
           type="button"
@@ -128,10 +128,58 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-4" style={{ backgroundColor: '#05070a' }}>
-      
+    <div className="min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-4" style={{ backgroundColor: 'var(--bg)' }}>
+      {/* CSS Stylesheet Injected safely for Next.js compilation */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        :root {
+          --bg:        #04080f;
+          --bg2:       #080e1a;
+          --surface:   #0c1424;
+          --surface2:  #101c30;
+          --border:    rgba(0,190,255,0.12);
+          --cyan:      #00c8ff;
+          --cyan-dim:  rgba(0,200,255,0.18);
+          --cyan-glow: rgba(0,200,255,0.35);
+          --green:     #00ffb2;
+          --purple:    #9b5cff;
+          --text:      #e8f4ff;
+          --text-muted:#7a9ab8;
+          --radius:    14px;
+        }
+
+        body::before {
+          content:'';
+          position:fixed; inset:0;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+          pointer-events:none; z-index:0; opacity:.4;
+        }
+
+        .grid-bg {
+          position:absolute; inset:0; overflow:hidden; pointer-events:none;
+          background-image:
+            linear-gradient(rgba(0,200,255,.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,200,255,.04) 1px, transparent 1px);
+          background-size: 48px 48px;
+        }
+
+        .logo-dot {
+          width:8px; height:8px; border-radius:50%;
+          background:var(--cyan);
+          box-shadow:0 0 10px var(--cyan);
+          animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+          0%,100%{opacity:1;transform:scale(1)}
+          50%{opacity:.5;transform:scale(.7)}
+        }
+      ` }} />
+
+      {/* Grid background matching landing page */}
+      <div className="grid-bg"></div>
+
       {/* Background Orbs */}
-      <div className="bg-glow-container">
+      <div className="bg-glow-container" style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
         <div className="glow-orb-1"></div>
         <div className="glow-orb-2"></div>
       </div>
@@ -143,28 +191,28 @@ export default function LoginPage() {
         display: 'flex',
         flexDirection: 'column',
         gap: '2rem',
-        padding: '2rem 0'
+        padding: '2rem 0',
+        zIndex: 1
       }}>
         
         {/* Header Logo */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+            background: 'linear-gradient(135deg, var(--cyan) 0%, #0076ff 100%)',
             width: '32px',
             height: '32px',
-            borderRadius: '50%',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(139, 92, 246, 0.4)'
+            boxShadow: '0 0 15px var(--cyan-glow)'
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.5 7.5 6 12.8 6 15c0 3.3 2.7 6 6 6s6-2.7 6-6c0-2.2-0.5-7.5-6-13z" fill="#05070a"/>
-              <path d="M12 21c-2.5 0-4.5-2-4.5-4.5 0-1.5 0.3-4.5 3-7.5.3.8 1 2 1 3.5 0 .8-.7 1.5-1.5 1.5h3c-.8 0-1.5-.7-1.5-1.5 0-1.5.7-2.7 1-3.5 2.7 3 3 6 3 7.5 0 2.5-2 4.5-4.5 4.5z" fill="#8b5cf6"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#060913" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
             </svg>
           </div>
           <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
-            PulseLife <span style={{ color: '#8b5cf6' }}>AI</span>
+            MediScan <span style={{ color: 'var(--cyan)' }}>AI</span>
           </span>
         </div>
 
@@ -173,7 +221,7 @@ export default function LoginPage() {
           /* Sign Up Form */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', fontFamily: 'Syne, sans-serif' }}>
                 Create your account
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
@@ -184,7 +232,7 @@ export default function LoginPage() {
             <form onSubmit={handleSignupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Full Name input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="signup-name" style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: 700, letterSpacing: '0.03em' }}>
+                <label htmlFor="signup-name" style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
                   Full Name
                 </label>
                 <input 
@@ -195,8 +243,8 @@ export default function LoginPage() {
                   onChange={(e) => setSignupName(e.target.value)}
                   required
                   style={{
-                    background: '#111317',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
                     borderRadius: '10px',
                     padding: '0.85rem 1rem',
                     color: '#ffffff',
@@ -204,22 +252,22 @@ export default function LoginPage() {
                     outline: 'none',
                     transition: 'var(--transition-smooth)'
                   }}
-                  className="focus:border-[#8b5cf6]"
+                  className="focus:border-[var(--cyan)]"
                 />
               </div>
 
               {/* Role Segmented Selector */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: 700, letterSpacing: '0.03em' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
                   Register As
                 </span>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
-                  background: '#111317',
+                  background: 'var(--surface2)',
                   padding: '4px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.06)'
+                  border: '1px solid var(--border)'
                 }}>
                   <button
                     type="button"
@@ -228,9 +276,9 @@ export default function LoginPage() {
                       padding: '0.6rem',
                       borderRadius: '8px',
                       border: 'none',
-                      background: signupRole === 'patient' ? '#8b5cf6' : 'transparent',
-                      color: '#ffffff',
-                      fontWeight: 600,
+                      background: signupRole === 'patient' ? 'linear-gradient(135deg, var(--cyan), #0076ff)' : 'transparent',
+                      color: signupRole === 'patient' ? '#020811' : '#ffffff',
+                      fontWeight: 700,
                       fontSize: '0.85rem',
                       cursor: 'pointer',
                       transition: 'var(--transition-smooth)'
@@ -245,9 +293,9 @@ export default function LoginPage() {
                       padding: '0.6rem',
                       borderRadius: '8px',
                       border: 'none',
-                      background: signupRole === 'doctor' ? '#8b5cf6' : 'transparent',
-                      color: '#ffffff',
-                      fontWeight: 600,
+                      background: signupRole === 'doctor' ? 'linear-gradient(135deg, var(--cyan), #0076ff)' : 'transparent',
+                      color: signupRole === 'doctor' ? '#020811' : '#ffffff',
+                      fontWeight: 700,
                       fontSize: '0.85rem',
                       cursor: 'pointer',
                       transition: 'var(--transition-smooth)'
@@ -260,7 +308,7 @@ export default function LoginPage() {
 
               {/* Email input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="signup-email" style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: 700, letterSpacing: '0.03em' }}>
+                <label htmlFor="signup-email" style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
                   Email Address
                 </label>
                 <input 
@@ -271,8 +319,8 @@ export default function LoginPage() {
                   onChange={(e) => setSignupEmail(e.target.value)}
                   required
                   style={{
-                    background: '#111317',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
                     borderRadius: '10px',
                     padding: '0.85rem 1rem',
                     color: '#ffffff',
@@ -280,7 +328,7 @@ export default function LoginPage() {
                     outline: 'none',
                     transition: 'var(--transition-smooth)'
                   }}
-                  className="focus:border-[#8b5cf6]"
+                  className="focus:border-[var(--cyan)]"
                 />
               </div>
 
@@ -311,8 +359,8 @@ export default function LoginPage() {
                   justifyContent: 'center',
                   padding: '0.9rem',
                   borderRadius: '10px',
-                  background: '#8b5cf6',
-                  boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                  background: 'linear-gradient(135deg, var(--cyan), #0076ff)',
+                  boxShadow: '0 4px 15px var(--cyan-glow)',
                   marginTop: '0.5rem'
                 }}
               >
@@ -326,7 +374,7 @@ export default function LoginPage() {
               <button 
                 onClick={() => setIsSignUp(false)}
                 style={{ 
-                  color: '#a78bfa', 
+                  color: 'var(--cyan)', 
                   background: 'none', 
                   border: 'none', 
                   fontWeight: 700, 
@@ -343,7 +391,7 @@ export default function LoginPage() {
           /* Login Form */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', fontFamily: 'Syne, sans-serif' }}>
                 Assess your health
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
@@ -354,7 +402,7 @@ export default function LoginPage() {
             <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Email input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="login-email" style={{ fontSize: '0.8rem', color: '#a78bfa', fontWeight: 700, letterSpacing: '0.03em' }}>
+                <label htmlFor="login-email" style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
                   Email Address
                 </label>
                 <input 
@@ -365,8 +413,8 @@ export default function LoginPage() {
                   onChange={(e) => setLoginEmail(e.target.value)}
                   required
                   style={{
-                    background: '#111317',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
                     borderRadius: '10px',
                     padding: '0.85rem 1rem',
                     color: '#ffffff',
@@ -374,7 +422,7 @@ export default function LoginPage() {
                     outline: 'none',
                     transition: 'var(--transition-smooth)'
                   }}
-                  className="focus:border-[#8b5cf6]"
+                  className="focus:border-[var(--cyan)]"
                 />
               </div>
 
@@ -395,7 +443,7 @@ export default function LoginPage() {
                     onClick={(e) => { e.preventDefault(); alert('Reset password link has been simulated.'); }}
                     style={{
                       fontSize: '0.75rem',
-                      color: '#a78bfa',
+                      color: 'var(--cyan)',
                       textDecoration: 'none',
                       fontWeight: 600
                     }}
@@ -415,8 +463,8 @@ export default function LoginPage() {
                   justifyContent: 'center',
                   padding: '0.9rem',
                   borderRadius: '10px',
-                  background: '#8b5cf6',
-                  boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
+                  background: 'linear-gradient(135deg, var(--cyan), #0076ff)',
+                  boxShadow: '0 4px 15px var(--cyan-glow)'
                 }}
               >
                 Log in
@@ -434,9 +482,9 @@ export default function LoginPage() {
               letterSpacing: '0.1em',
               margin: '0.5rem 0'
             }}>
-              <div style={{ height: '1px', flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.06)' }}></div>
+              <div style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></div>
               <span>OR LOGIN WITH</span>
-              <div style={{ height: '1px', flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.06)' }}></div>
+              <div style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></div>
             </div>
 
             {/* Social Authentication */}
@@ -450,8 +498,8 @@ export default function LoginPage() {
                   gap: '8px',
                   padding: '0.8rem',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  background: '#111317',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface2)',
                   color: '#ffffff',
                   fontSize: '0.9rem',
                   fontWeight: 600,
@@ -478,8 +526,8 @@ export default function LoginPage() {
                   gap: '8px',
                   padding: '0.8rem',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  background: '#111317',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface2)',
                   color: '#ffffff',
                   fontSize: '0.9rem',
                   fontWeight: 600,
@@ -501,7 +549,7 @@ export default function LoginPage() {
               <button 
                 onClick={() => setIsSignUp(true)}
                 style={{ 
-                  color: '#a78bfa', 
+                  color: 'var(--cyan)', 
                   background: 'none', 
                   border: 'none', 
                   fontWeight: 700, 
@@ -518,8 +566,8 @@ export default function LoginPage() {
 
         {/* AI Diagnostics Banner Card */}
         <div style={{
-          background: 'rgba(17, 19, 23, 0.7)',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: '16px',
           padding: '1.5rem',
           position: 'relative',
@@ -528,26 +576,24 @@ export default function LoginPage() {
           flexDirection: 'column',
           gap: '8px'
         }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff' }}>
-            AI Diagnostics
+          <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', fontFamily: 'Syne, sans-serif' }}>
+            Clinical Intelligence
           </h4>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.5, zIndex: 1, maxWidth: '80%' }}>
-            Our AI analyzes over 1,500 clinical symptoms to provide accurate health insights and personalized care recommendations.
+            Our AI analyzes radiological image parameters and clinical symptoms to provide high-fidelity triage assessment recommendations.
           </p>
 
-          {/* SVG brain gear logo absolute positioned in the bottom right corner */}
+          {/* SVG gear brain logo absolute positioned in the bottom right corner */}
           <div style={{
             position: 'absolute',
             right: '-10px',
             bottom: '-10px',
-            color: 'rgba(139, 92, 246, 0.12)',
+            color: 'rgba(0, 200, 255, 0.05)',
             zIndex: 0
           }}>
             <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1 0-3.12 3 3 0 0 1 0-3.88 2.5 2.5 0 0 1 0-3.12A2.5 2.5 0 0 1 9.5 2Z" fill="currentColor" fillOpacity="0.1"/>
-              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 0-3.12 3 3 0 0 0 0-3.88 2.5 2.5 0 0 0 0-3.12A2.5 2.5 0 0 0 14.5 2Z" fill="currentColor" fillOpacity="0.1"/>
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" fill="currentColor" fillOpacity="0.1"/>
               <circle cx="12" cy="12" r="3" />
-              <path d="M12 2v2M12 20v2M4 12h2M18 12h2M6.34 6.34l1.42 1.42M16.24 16.24l1.42 1.42M6.34 16.24l1.42-1.42M16.24 6.34l1.42-1.42"/>
             </svg>
           </div>
         </div>
