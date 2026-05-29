@@ -2,22 +2,24 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
-  // Create an unmodified response
+  // Create an unmodified response that we can modify cookies on
   let supabaseResponse = NextResponse.next({
     request,
   })
 
-  // Initialize the Supabase Edge client
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-placeholder-anon-key-placeholder-anon-key-placeholder-anon-key';
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -29,42 +31,34 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Fetch the secure user session
-  const { data: { user } } = await supabase.auth.getUser()
+  // Verify user session securely against the Supabase database.
+  // getUser() validates the JWT on the Supabase Auth server and does not require email confirmation.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const path = request.nextUrl.pathname
+  const path = request.nextUrl.pathname;
 
-  // 1. Allow public routes
-  if (path === '/' || path.startsWith('/login')) {
-    // Optional polish: If they are already logged in and try to visit /login, 
-    // redirect them to their respective dashboard.
-    if (user) {
-        const role = user.user_metadata?.requested_role || 'patient'
-        return NextResponse.redirect(new URL(`/${role}`, request.url))
-    }
-    return supabaseResponse
+  // Protect patient and doctor workspace dashboard routes
+  const isDashboardRoute = path.startsWith('/patient') || path.startsWith('/doctor');
+  const isLoginRoute = path === '/login';
+
+  if (!user && isDashboardRoute) {
+    // Force unauthenticated requests back to the login gateway
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
-  // 2. Protect everything else - kick to login if no session
-  if (!user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (user && isLoginRoute) {
+    // Seamless routing for active authenticated session
+    const role = user.user_metadata?.role || 'patient';
+    const url = request.nextUrl.clone()
+    url.pathname = `/${role}`
+    return NextResponse.redirect(url)
   }
 
-  // 3. Role-Based Access Control (RBAC)
-  // Assumes you stored the role in user_metadata during the signup flow
-  const role = user.user_metadata?.requested_role || 'patient'
-
-  // Block patients from viewing the doctor triage dashboard
-  if (path.startsWith('/doctor') && role !== 'doctor') {
-    return NextResponse.redirect(new URL('/patient', request.url))
-  }
-
-  // Optional: Block doctors from the patient portal to keep workflows clean
-  if (path.startsWith('/patient') && role !== 'patient') {
-    return NextResponse.redirect(new URL('/doctor', request.url))
-  }
-
-  return supabaseResponse
+  return supabaseResponse;
 }
 
 // 4. Configure the Matcher

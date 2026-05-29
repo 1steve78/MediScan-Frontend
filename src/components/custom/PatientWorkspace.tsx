@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { uploadAndAnalyzeReport, getJobStatus, AnalyzeResultPayload } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 // Premium mock scan presets
 interface ScanPreset {
@@ -81,6 +82,16 @@ const SCAN_PRESETS: ScanPreset[] = [
 ];
 
 export default function PatientWorkspace() {
+  const handleSignOut = async () => {
+    try {
+      console.log('[MediScan-Ai Patient] Signing out...');
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('[MediScan-Ai Patient] Error signing out:', err);
+    }
+  };
+
   const [selectedScan, setSelectedScan] = useState<ScanPreset | null>(null);
   const [symptoms, setSymptoms] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -308,6 +319,31 @@ export default function PatientWorkspace() {
           <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
             v4.2-Pro
           </span>
+          <button 
+            onClick={handleSignOut}
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              color: '#ef4444',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'var(--transition-smooth)'
+            }}
+            className="hover:bg-[rgba(239,68,68,0.2)]"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" x2="9" y1="12" y2="12"/>
+            </svg>
+            Sign Out
+          </button>
         </div>
       </header>
 
@@ -515,7 +551,7 @@ export default function PatientWorkspace() {
               <div className="scanning-container" style={{
                 position: 'relative',
                 height: '240px',
-                background: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${selectedScan.imageUrl})`,
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${selectedScan.imageUrl})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 border: '1px solid var(--border-color)',

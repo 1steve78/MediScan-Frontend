@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface PasswordInputProps {
   label: string;
@@ -80,6 +81,8 @@ function PasswordInput({ label, placeholder, value, onChange, id }: PasswordInpu
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Login states
   const [loginEmail, setLoginEmail] = useState('');
@@ -92,39 +95,81 @@ export default function LoginPage() {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupRole, setSignupRole] = useState<'patient' | 'doctor'>('patient');
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) return;
-    
-    alert(`Authentication success! Logging in as: ${loginEmail}`);
-    // Simulate redirection to appropriate dashboard based on login email prefix or mockup default
-    if (loginEmail.toLowerCase().includes('doctor') || loginEmail.toLowerCase().includes('practitioner')) {
-      window.location.href = '/doctor';
-    } else {
-      window.location.href = '/patient';
+
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        const role = data.user.user_metadata?.role || 'patient';
+        console.log(`[MediScan-Ai Auth] Supabase sign-in successful! User role: ${role}`);
+        window.location.href = `/${role}`;
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'An unexpected error occurred during login.');
+      setIsLoading(false);
     }
   };
 
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signupName || !signupEmail || !signupPassword || !signupConfirmPassword) return;
-    
+
     if (signupPassword !== signupConfirmPassword) {
-      alert('Passwords do not match!');
+      setAuthError('Passwords do not match!');
       return;
     }
-    
-    alert(`Registration success! Registered ${signupName} as a ${signupRole.toUpperCase()}. Please log in.`);
-    // Autofill signup email and switch to login view
-    setLoginEmail(signupEmail);
-    setIsSignUp(false);
-    
-    // Clear signup state
-    setSignupName('');
-    setSignupEmail('');
-    setSignupPassword('');
-    setSignupConfirmPassword('');
-    setSignupRole('patient');
+
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            name: signupName,
+            role: signupRole,
+          },
+        },
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        console.log(`[MediScan-Ai Auth] Supabase sign-up successful for: ${signupName}`);
+        if (data.session) {
+          // If email verification is disabled in Supabase, we are logged in immediately.
+          window.location.href = `/${signupRole}`;
+        } else {
+          // If email verification is enabled in Supabase settings
+          setAuthError('Registration successful! Please confirm your email (if required by your Supabase provider), or try logging in now.');
+          setIsLoading(false);
+        }
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'An unexpected error occurred during registration.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -219,7 +264,7 @@ export default function LoginPage() {
         {/* View Switcher: Sign Up View vs Log In View */}
         {isSignUp ? (
           /* Sign Up Form */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', fontFamily: 'Syne, sans-serif' }}>
                 Create your account
@@ -228,6 +273,33 @@ export default function LoginPage() {
                 Sign up to start accessing AI diagnostics and health reports
               </p>
             </div>
+
+            {authError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem',
+                color: '#ff6b6b',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                lineHeight: '1.4',
+                textAlign: 'left'
+              }}>
+                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  Authentication Error
+                </div>
+                <div>{authError}</div>
+              </div>
+            )}
 
             <form onSubmit={handleSignupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {/* Full Name input */}
@@ -242,6 +314,7 @@ export default function LoginPage() {
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
                   required
+                  disabled={isLoading}
                   style={{
                     background: 'var(--surface2)',
                     border: '1px solid var(--border)',
@@ -250,7 +323,8 @@ export default function LoginPage() {
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     outline: 'none',
-                    transition: 'var(--transition-smooth)'
+                    transition: 'var(--transition-smooth)',
+                    opacity: isLoading ? 0.7 : 1
                   }}
                   className="focus:border-[var(--cyan)]"
                 />
@@ -272,6 +346,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setSignupRole('patient')}
+                    disabled={isLoading}
                     style={{
                       padding: '0.6rem',
                       borderRadius: '8px',
@@ -280,7 +355,7 @@ export default function LoginPage() {
                       color: signupRole === 'patient' ? '#020811' : '#ffffff',
                       fontWeight: 700,
                       fontSize: '0.85rem',
-                      cursor: 'pointer',
+                      cursor: isLoading ? 'not-allowed' : 'pointer',
                       transition: 'var(--transition-smooth)'
                     }}
                   >
@@ -289,6 +364,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setSignupRole('doctor')}
+                    disabled={isLoading}
                     style={{
                       padding: '0.6rem',
                       borderRadius: '8px',
@@ -297,7 +373,7 @@ export default function LoginPage() {
                       color: signupRole === 'doctor' ? '#020811' : '#ffffff',
                       fontWeight: 700,
                       fontSize: '0.85rem',
-                      cursor: 'pointer',
+                      cursor: isLoading ? 'not-allowed' : 'pointer',
                       transition: 'var(--transition-smooth)'
                     }}
                   >
@@ -318,6 +394,7 @@ export default function LoginPage() {
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                   style={{
                     background: 'var(--surface2)',
                     border: '1px solid var(--border)',
@@ -326,7 +403,8 @@ export default function LoginPage() {
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     outline: 'none',
-                    transition: 'var(--transition-smooth)'
+                    transition: 'var(--transition-smooth)',
+                    opacity: isLoading ? 0.7 : 1
                   }}
                   className="focus:border-[var(--cyan)]"
                 />
@@ -354,6 +432,7 @@ export default function LoginPage() {
               <button 
                 type="submit" 
                 className="btn-primary" 
+                disabled={isLoading}
                 style={{
                   width: '100%',
                   justifyContent: 'center',
@@ -361,10 +440,12 @@ export default function LoginPage() {
                   borderRadius: '10px',
                   background: 'linear-gradient(135deg, var(--cyan), #0076ff)',
                   boxShadow: '0 4px 15px var(--cyan-glow)',
-                  marginTop: '0.5rem'
+                  marginTop: '0.5rem',
+                  opacity: isLoading ? 0.7 : 1,
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
                 }}
               >
-                Sign up
+                {isLoading ? 'Creating Account...' : 'Sign up'}
               </button>
             </form>
 
@@ -372,13 +453,14 @@ export default function LoginPage() {
             <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Already have an account?{' '}
               <button 
-                onClick={() => setIsSignUp(false)}
+                onClick={() => { setIsSignUp(false); setAuthError(null); }}
+                disabled={isLoading}
                 style={{ 
                   color: 'var(--cyan)', 
                   background: 'none', 
                   border: 'none', 
                   fontWeight: 700, 
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   padding: 0
                 }}
                 className="hover:underline"
@@ -389,7 +471,7 @@ export default function LoginPage() {
           </div>
         ) : (
           /* Login Form */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', fontFamily: 'Syne, sans-serif' }}>
                 Assess your health
@@ -398,6 +480,44 @@ export default function LoginPage() {
                 Login to Access Health Reports and Identify the Illness
               </p>
             </div>
+
+            {authError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem',
+                color: '#ff6b6b',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                lineHeight: '1.4',
+                textAlign: 'left'
+              }}>
+                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  Authentication Error
+                </div>
+                <div>{authError}</div>
+                {authError.toLowerCase().includes('credential') && (
+                  <div style={{
+                    marginTop: '4px',
+                    paddingTop: '6px',
+                    borderTop: '1px solid rgba(239, 68, 68, 0.15)',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)'
+                  }}>
+                    <strong style={{ color: 'var(--cyan)' }}>Developer Tip:</strong> Ensure this user is registered in your Supabase project. If email confirmation is enabled, click the link in the sign-up verification email or disable <em>"Confirm email"</em> in <strong>Supabase Dashboard &gt; Authentication &gt; Providers &gt; Email</strong>.
+                  </div>
+                )}
+              </div>
+            )}
 
             <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* Email input */}
@@ -408,10 +528,11 @@ export default function LoginPage() {
                 <input 
                   id="login-email"
                   type="text" 
-                  placeholder="Email or Phone" 
+                  placeholder="Email Address" 
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                   style={{
                     background: 'var(--surface2)',
                     border: '1px solid var(--border)',
@@ -420,7 +541,8 @@ export default function LoginPage() {
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     outline: 'none',
-                    transition: 'var(--transition-smooth)'
+                    transition: 'var(--transition-smooth)',
+                    opacity: isLoading ? 0.7 : 1
                   }}
                   className="focus:border-[var(--cyan)]"
                 />
@@ -440,7 +562,7 @@ export default function LoginPage() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                   <Link 
                     href="#"
-                    onClick={(e) => { e.preventDefault(); alert('Reset password link has been simulated.'); }}
+                    onClick={(e) => { e.preventDefault(); alert('Reset password link simulation.'); }}
                     style={{
                       fontSize: '0.75rem',
                       color: 'var(--cyan)',
@@ -458,16 +580,19 @@ export default function LoginPage() {
               <button 
                 type="submit" 
                 className="btn-primary" 
+                disabled={isLoading}
                 style={{
                   width: '100%',
                   justifyContent: 'center',
                   padding: '0.9rem',
                   borderRadius: '10px',
                   background: 'linear-gradient(135deg, var(--cyan), #0076ff)',
-                  boxShadow: '0 4px 15px var(--cyan-glow)'
+                  boxShadow: '0 4px 15px var(--cyan-glow)',
+                  opacity: isLoading ? 0.7 : 1,
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
                 }}
               >
-                Log in
+                {isLoading ? 'Verifying...' : 'Log in'}
               </button>
             </form>
 
@@ -490,7 +615,21 @@ export default function LoginPage() {
             {/* Social Authentication */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <button 
-                onClick={() => { alert('Google sign in simulated.'); window.location.href = '/patient'; }}
+                onClick={async () => {
+                  setAuthError(null);
+                  try {
+                    const { error } = await supabase.auth.signInWithOAuth({
+                      provider: 'google',
+                      options: {
+                        redirectTo: window.location.origin + '/patient'
+                      }
+                    });
+                    if (error) setAuthError(error.message);
+                  } catch (err: any) {
+                    setAuthError(err.message || 'OAuth initiation failed.');
+                  }
+                }}
+                disabled={isLoading}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -503,7 +642,7 @@ export default function LoginPage() {
                   color: '#ffffff',
                   fontSize: '0.9rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   transition: 'var(--transition-smooth)'
                 }}
                 className="hover:bg-[rgba(255,255,255,0.03)]"
@@ -518,7 +657,21 @@ export default function LoginPage() {
               </button>
               
               <button 
-                onClick={() => { alert('Apple sign in simulated.'); window.location.href = '/patient'; }}
+                onClick={async () => {
+                  setAuthError(null);
+                  try {
+                    const { error } = await supabase.auth.signInWithOAuth({
+                      provider: 'apple',
+                      options: {
+                        redirectTo: window.location.origin + '/patient'
+                      }
+                    });
+                    if (error) setAuthError(error.message);
+                  } catch (err: any) {
+                    setAuthError(err.message || 'OAuth initiation failed.');
+                  }
+                }}
+                disabled={isLoading}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -531,7 +684,7 @@ export default function LoginPage() {
                   color: '#ffffff',
                   fontSize: '0.9rem',
                   fontWeight: 600,
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   transition: 'var(--transition-smooth)'
                 }}
                 className="hover:bg-[rgba(255,255,255,0.03)]"
@@ -547,13 +700,14 @@ export default function LoginPage() {
             <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Don't have an account?{' '}
               <button 
-                onClick={() => setIsSignUp(true)}
+                onClick={() => { setIsSignUp(true); setAuthError(null); }}
+                disabled={isLoading}
                 style={{ 
                   color: 'var(--cyan)', 
                   background: 'none', 
                   border: 'none', 
                   fontWeight: 700, 
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   padding: 0
                 }}
                 className="hover:underline"

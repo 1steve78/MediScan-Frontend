@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { supabase } from '@/lib/supabase';
 import { 
   Activity, 
   Clock, 
@@ -171,6 +172,16 @@ const TriageBadge = ({ level }: { level: TriageLevel }) => {
 
 export default function DoctorDashboard() {
   const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
+
+  const handleSignOut = async () => {
+    try {
+      console.log('[MediScan-Ai Doctor] Signing out...');
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('[MediScan-Ai Doctor] Error signing out:', err);
+    }
+  };
   const [selectedId, setSelectedId] = useState(MOCK_PATIENTS[0].id);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -295,6 +306,17 @@ export default function DoctorDashboard() {
               </div>
             </div>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/25 text-red-500 text-xs font-bold transition-all cursor-pointer"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" x2="9" y1="12" y2="12"/>
+            </svg>
+            Sign Out
+          </button>
         </div>
       </header>
 
