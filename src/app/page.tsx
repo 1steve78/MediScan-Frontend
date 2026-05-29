@@ -1,613 +1,372 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-
-// Premium mock scan presets
-interface ScanPreset {
-  id: string;
-  name: string;
-  type: string;
-  imageUrl: string;
-  confidence: string;
-  findings: string[];
-  severity: 'low' | 'medium' | 'high';
-  metrics: {
-    resolution: string;
-    anomalyIndex: string;
-    safetyScore: string;
-  };
-}
-
-const SCAN_PRESETS: ScanPreset[] = [
-  {
-    id: 'brain-mri',
-    name: 'Brain MRI (T2-weighted)',
-    type: 'MRI',
-    imageUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&q=80&w=800',
-    confidence: '98.4%',
-    findings: [
-      'Normal ventricular size and configuration.',
-      'No evidence of acute intracranial hemorrhage or mass effect.',
-      'Subtle hyperintensity detected in the left temporal lobe, warrants clinical correlation.',
-      'No focal areas of restricted diffusion identified.'
-    ],
-    severity: 'medium',
-    metrics: {
-      resolution: '512 x 512 px',
-      anomalyIndex: '0.14 L',
-      safetyScore: '92.6%'
-    }
-  },
-  {
-    id: 'chest-xray',
-    name: 'Chest Radiograph (PA View)',
-    type: 'X-Ray',
-    imageUrl: 'https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&fit=crop&q=80&w=800',
-    confidence: '96.8%',
-    findings: [
-      'Lungs are clear bilaterally with no focal consolidations or pleural effusions.',
-      'Cardiomediastinal silhouette is within normal limits.',
-      'Bony thorax and soft tissues are unremarkable.',
-      'Zero active anomalies detected in the pulmonary fields.'
-    ],
-    severity: 'low',
-    metrics: {
-      resolution: '2048 x 2048 px',
-      anomalyIndex: '0.02 L',
-      safetyScore: '99.1%'
-    }
-  },
-  {
-    id: 'knee-ct',
-    name: 'Knee Joint Reconstruction CT',
-    type: 'CT Scan',
-    imageUrl: 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=800',
-    confidence: '94.2%',
-    findings: [
-      'Mild joint space narrowing in the medial compartment.',
-      'Subchondral sclerosis and minimal osteophyte formation present.',
-      'No evidence of acute cortical fracture or joint dislocation.',
-      'Suspected grade II tear in the anterior cruciate ligament.'
-    ],
-    severity: 'high',
-    metrics: {
-      resolution: '1024 x 1024 px',
-      anomalyIndex: '0.67 L',
-      safetyScore: '81.4%'
-    }
-  }
-];
+import React from 'react';
+import Link from 'next/link';
 
 export default function Home() {
-  const [selectedScan, setSelectedScan] = useState<ScanPreset | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanStep, setScanStep] = useState(0);
-  const [scanLogs, setScanLogs] = useState<string[]>([]);
-  const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<{ name: string; type: string } | null>(null);
-
-  const steps = [
-    'Initializing advanced convolutional neural network...',
-    'Performing multi-planar reconstruction (MPR)...',
-    'Applying noise reduction and edge enhancement algorithms...',
-    'Segmenting anatomical regions of interest (ROI)...',
-    'Analyzing voxel density and density gradient variances...',
-    'Cross-referencing anomaly database (12M+ clinical scans)...',
-    'Generating comprehensive diagnostics report...'
-  ];
-
-  // Simulator for the scanning process
-  useEffect(() => {
-    if (!isScanning) return;
-
-    setScanStep(0);
-    setScanLogs([steps[0]]);
-
-    const interval = setInterval(() => {
-      setScanStep((prev) => {
-        const next = prev + 1;
-        if (next < steps.length) {
-          setScanLogs((logs) => [...logs, steps[next]]);
-          return next;
-        } else {
-          clearInterval(interval);
-          setIsScanning(false);
-          setIsAnalysisComplete(true);
-          return prev;
-        }
-      });
-    }, 900);
-
-    return () => clearInterval(interval);
-  }, [isScanning]);
-
-  const handleSelectPreset = (preset: ScanPreset) => {
-    setSelectedScan(preset);
-    setIsAnalysisComplete(false);
-    setIsScanning(false);
-    setScanLogs([]);
-    setUploadedFile(null);
-  };
-
-  const handleStartAnalysis = () => {
-    if (!selectedScan) return;
-    setIsAnalysisComplete(false);
-    setIsScanning(true);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsUploading(true);
-    
-    // Simulate premium upload
-    setTimeout(() => {
-      setUploadedFile({
-        name: 'Patient_Scan_' + Math.floor(Math.random() * 10000) + '.jpg',
-        type: 'Chest X-Ray (Simulated)'
-      });
-      // Fallback to chest-xray preset to display rich details
-      setSelectedScan(SCAN_PRESETS[1]);
-      setIsUploading(false);
-      setIsAnalysisComplete(false);
-    }, 1500);
-  };
-
   return (
-    <div className="app-container">
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ backgroundColor: 'var(--bg-main)' }}>
       {/* Background Orbs */}
       <div className="bg-glow-container">
         <div className="glow-orb-1"></div>
         <div className="glow-orb-2"></div>
       </div>
 
-      {/* Premium Header */}
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingBottom: '2rem',
-        borderBottom: '1px solid var(--border-color)',
-        marginBottom: '2rem'
-      }}>
+      {/* Top Navbar */}
+      <nav className="nav-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Logo SVG */}
           <div style={{
             background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: '0 0 15px var(--primary-glow)'
           }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#060913" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#060913" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
               <path d="M5 3v4"/>
               <path d="M3 5h4"/>
             </svg>
           </div>
-          <div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.03em' }}>
-              MediScan<span className="cyan-gradient-text">-Ai</span>
-            </h1>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>CLINICAL INTELLIGENCE SUITE</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span className="status-badge success" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '6px', height: '6px', backgroundColor: '#10b981', borderRadius: '50%', display: 'inline-block' }}></span>
-            SYSTEM OPERATIONAL
-          </span>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-            v4.2-Pro
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.03em' }}>
+            MediScan<span className="cyan-gradient-text">AI</span>
           </span>
         </div>
-      </header>
 
-      {/* Hero Welcome / Intro */}
-      <section style={{ marginBottom: '2rem', textAlign: 'center' }}>
-        <h2 className="gradient-text" style={{ fontSize: '2.5rem', marginBottom: '0.75rem', fontWeight: 800 }}>
-          Precision AI Diagnostics for Medical Scans
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0 auto', fontSize: '1.05rem', lineHeight: '1.6' }}>
-          Upload radiographic imaging scans to generate localized anomaly segmentation maps, quantitative biomarkers, and predictive clinical summaries in seconds.
-        </p>
-      </section>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <Link 
+            id="nav-login-btn"
+            href="/login" 
+            style={{ 
+              color: 'var(--text-secondary)', 
+              textDecoration: 'none', 
+              fontSize: '0.9rem', 
+              fontWeight: 600,
+              transition: 'var(--transition-smooth)'
+            }}
+            className="hover:text-white"
+          >
+            Login
+          </Link>
+          <Link 
+            id="nav-get-started-btn"
+            href="/patient" 
+            className="btn-primary" 
+            style={{ 
+              padding: '0.6rem 1.25rem', 
+              fontSize: '0.85rem',
+              border: '1px solid rgba(139, 92, 246, 0.4)'
+            }}
+          >
+            GET STARTED
+          </Link>
+        </div>
+      </nav>
 
-      {/* Main Dashboard Grid */}
-      <div className="dashboard-grid">
-        {/* Left Side: Scan Upload and Preset Selector */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flexFlow: 'column' }}>
-          
-          {/* Preset Selector */}
-          <div className="glass-card">
-            <h3 style={{ fontSize: '1.15rem', marginBottom: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                <path d="M9 3v18"/>
-                <path d="M15 3v18"/>
-                <path d="M3 9h18"/>
-                <path d="M3 15h18"/>
-              </svg>
-              Select Sample Scan Preset
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Test the AI analysis pipeline instantly by choosing one of the calibrated clinical presets below.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {SCAN_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  onClick={() => handleSelectPreset(preset)}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    border: '1px solid ' + (selectedScan?.id === preset.id ? 'var(--primary)' : 'var(--border-color)'),
-                    background: selectedScan?.id === preset.id ? 'rgba(13, 242, 201, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    color: 'var(--text-primary)',
-                    transition: 'var(--transition-smooth)'
-                  }}
-                  className="preset-btn"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: preset.severity === 'low' ? 'var(--success)' : preset.severity === 'medium' ? 'var(--warning)' : 'var(--danger)'
-                    }} />
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{preset.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Modality: {preset.type}</div>
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                    fontWeight: 600,
-                    color: 'var(--text-secondary)'
-                  }}>
-                    {preset.type}
-                  </span>
-                </button>
-              ))}
-            </div>
+      {/* Main Container */}
+      <main className="app-container" style={{ padding: '4rem 2rem', gap: '6rem' }}>
+        
+        {/* Hero Section */}
+        <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '2rem' }}>
+          {/* Clinical Integration Badge */}
+          <div className="badge-pill-clinical">
+            <span style={{
+              width: '6px',
+              height: '6px',
+              backgroundColor: 'var(--secondary)',
+              borderRadius: '50%',
+              display: 'inline-block',
+              boxShadow: '0 0 8px var(--secondary)'
+            }}></span>
+            CLINICAL INTEGRATION SUITE
           </div>
 
-          {/* Interactive Upload Dropzone */}
-          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h3 style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" x2="12" y1="3" y2="15"/>
-              </svg>
-              Upload Patient Scan
-            </h3>
-            
-            <div 
-              className="scan-dropzone" 
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
+          {/* Heading */}
+          <h1 className="gradient-text" style={{ fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', fontWeight: 800, lineHeight: 1.15, maxWidth: '900px' }}>
+            AI-powered <span className="purple-gradient-text" style={{ fontStyle: 'italic', fontWeight: 700 }}>Smart</span><br />
+            Medical Diagnosis
+          </h1>
+
+          {/* Subtitle */}
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(1.1rem, 2vw, 1.4rem)', fontStyle: 'italic', fontWeight: 400, maxWidth: '600px' }}>
+            "Faster insights can lead to faster treatment."
+          </p>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '1rem' }}>
+            <Link 
+              id="hero-patient-portal-btn"
+              href="/patient" 
+              className="btn-primary" 
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '1rem', padding: '0.9rem 2rem' }}
             >
-              {isUploading ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    border: '3px solid rgba(13, 242, 201, 0.2)',
-                    borderTop: '3px solid var(--primary)',
-                    borderRadius: '50%',
-                    animation: 'spin 1s infinite linear'
-                  }} />
-                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Encrypting & uploading scan securely...</p>
-                </div>
-              ) : uploadedFile ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                  <p style={{ fontWeight: 600, fontSize: '0.95rem', color: '#34d399' }}>Scan Loaded Successfully</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{uploadedFile.name}</p>
-                </div>
-              ) : (
-                <>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                    <circle cx="9" cy="9" r="2"/>
-                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                  </svg>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
-                      Drag and drop DICOM / Image file here
-                    </p>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Supports DICOM, JPEG, PNG (HIPAA Compliant / TLS End-to-End)
-                    </p>
-                  </div>
-                  <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.8rem' }}>
-                    Browse Files
-                  </button>
-                </>
-              )}
+              Patient Portal
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </Link>
+            
+            <Link 
+              id="hero-doctor-login-btn"
+              href="/doctor" 
+              className="btn-secondary btn-glow-doctor"
+              style={{ fontSize: '1rem', padding: '0.9rem 2rem' }}
+            >
+              Doctor Login
+            </Link>
+          </div>
+
+          {/* 3D Brain Scan Showcase Mockup */}
+          <div style={{ width: '100%', marginTop: '3rem' }}>
+            <div className="device-mockup">
+              <div className="device-inner">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src="/brain_scan_ui.png" 
+                  alt="Futuristic Holographic 3D Brain Scan Interface" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Right Side: Scan Display and Results */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {selectedScan ? (
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'relative' }}>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="status-badge processing" style={{
-                  backgroundColor: isScanning ? 'rgba(59, 130, 246, 0.15)' : isAnalysisComplete ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                  color: isScanning ? '#60a5fa' : isAnalysisComplete ? '#34d399' : 'var(--text-secondary)',
-                  border: '1px solid ' + (isScanning ? 'rgba(59, 130, 246, 0.3)' : isAnalysisComplete ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)')
-                }}>
-                  {isScanning ? 'ANALYZING...' : isAnalysisComplete ? 'ANALYSIS COMPLETE' : 'READY FOR ANALYSIS'}
-                </span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                  ID: {selectedScan.id.toUpperCase()}-082
-                </span>
-              </div>
+        {/* Diagnostic Capabilities Section */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+          <h2 className="header-underline" style={{ fontSize: '2rem', fontWeight: 800 }}>
+            Diagnostic Capabilities
+          </h2>
 
-              <h3 style={{ fontSize: '1.25rem' }}>{selectedScan.name}</h3>
-
-              {/* Scanning Image Preview */}
-              <div className="scanning-container" style={{
-                position: 'relative',
-                height: '240px',
-                background: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${selectedScan.imageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                border: '1px solid var(--border-color)',
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '2rem' 
+          }}>
+            {/* Capability Card 1 */}
+            <div className="glass-card neon-hover-teal" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'rgba(13, 242, 201, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                border: '1px solid rgba(13, 242, 201, 0.2)'
               }}>
-                {isScanning && <div className="scanning-bar" />}
-                
-                {!isScanning && !isAnalysisComplete && (
-                  <div style={{
-                    background: 'rgba(6, 9, 19, 0.8)',
-                    backdropFilter: 'blur(4px)',
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    textAlign: 'center',
-                    border: '1px solid var(--border-color)',
-                    maxWidth: '85%'
-                  }}>
-                    <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.75rem' }}>Click analyze to invoke deep clinical scan neural network</p>
-                    <button className="btn-primary" onClick={handleStartAnalysis}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                      </svg>
-                      Analyze Scan
-                    </button>
-                  </div>
-                )}
-
-                {isAnalysisComplete && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    background: 'rgba(16, 185, 129, 0.95)',
-                    color: '#060913',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    boxShadow: '0 0 10px rgba(16, 185, 129, 0.3)'
-                  }}>
-                    {selectedScan.confidence} CONFIDENCE
-                  </div>
-                )}
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                  <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                  <path d="M10 9H8"/>
+                  <path d="M16 13H8"/>
+                  <path d="M16 17H8"/>
+                </svg>
               </div>
-
-              {/* Scanning Real-time Console Log */}
-              {isScanning && (
-                <div style={{
-                  background: 'rgba(0, 0, 0, 0.5)',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
-                  borderRadius: '10px',
-                  padding: '1rem',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.75rem',
-                  color: '#60a5fa',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                  maxHeight: '140px',
-                  overflowY: 'auto'
-                }}>
-                  {scanLogs.map((log, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '8px' }}>
-                      <span style={{ color: 'rgba(96, 165, 250, 0.5)' }}>&gt;</span>
-                      <span>{log}</span>
-                    </div>
-                  ))}
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                    <span style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--secondary)',
-                      animation: 'pulse 1s infinite'
-                    }} />
-                    <span style={{ fontStyle: 'italic', color: 'rgba(96, 165, 250, 0.7)' }}>Processing voxels...</span>
-                  </div>
-                </div>
-              )}
-
-              {/* AI Diagnostic Breakdown Report */}
-              {isAnalysisComplete && (
-                <div style={{
-                  animation: 'fadeIn 0.5s ease-out',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1.25rem'
-                }}>
-                  
-                  {/* Biomarkers / Metrics */}
-                  <div>
-                    <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                      QUANTITATIVE BIOMARKERS
-                    </h4>
-                    <div className="metric-row">
-                      <div className="metric-card">
-                        <div className="metric-value">{selectedScan.metrics.resolution}</div>
-                        <div className="metric-label">Resolution</div>
-                      </div>
-                      <div className="metric-card">
-                        <div className="metric-value" style={{ color: selectedScan.severity === 'high' ? 'var(--danger)' : selectedScan.severity === 'medium' ? 'var(--warning)' : 'var(--success)' }}>
-                          {selectedScan.metrics.anomalyIndex}
-                        </div>
-                        <div className="metric-label">Anomaly Index</div>
-                      </div>
-                      <div className="metric-card">
-                        <div className="metric-value">{selectedScan.metrics.safetyScore}</div>
-                        <div className="metric-label">Clearance Score</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Findings */}
-                  <div>
-                    <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <line x1="9" x2="20" y1="6" y2="6"/>
-                        <line x1="9" x2="20" y1="12" y2="12"/>
-                        <line x1="9" x2="20" y1="18" y2="18"/>
-                        <line x1="5" x2="5.01" y1="6" y2="6"/>
-                        <line x1="5" x2="5.01" y1="12" y2="12"/>
-                        <line x1="5" x2="5.01" y1="18" y2="18"/>
-                      </svg>
-                      AI Diagnostic Findings
-                    </h4>
-                    <ul style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                      paddingLeft: '1rem',
-                      fontSize: '0.9rem',
-                      color: 'var(--text-secondary)',
-                      lineHeight: '1.5'
-                    }}>
-                      {selectedScan.findings.map((finding, idx) => (
-                        <li key={idx} style={{ listStyleType: 'square' }}>
-                          {finding}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Actions Row */}
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                    <button className="btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => alert('PDF report is ready to download in clinical environments.')}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" x2="12" y1="15" y2="3"/>
-                      </svg>
-                      Export Report
-                    </button>
-                    <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => handleSelectPreset(selectedScan)}>
-                      Reset Scan
-                    </button>
-                  </div>
-
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="glass-card" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '4rem 2rem',
-              textAlign: 'center',
-              color: 'var(--text-secondary)',
-              borderStyle: 'dashed',
-              height: '100%'
-            }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '1.5rem' }}>
-                <path d="M4 22V4c0-.5.2-1 .6-1.4C5 2.2 5.5 2 6 2h8l6 6v12c0 .5-.2 1-.6 1.4-.4.4-.9.6-1.4.6H6c-.5 0-1-.2-1.4-.6-.4-.4-.6-.9-.6-1.4z"/>
-                <path d="M14 2v6h6"/>
-                <path d="M8 13h8"/>
-                <path d="M8 17h8"/>
-                <path d="M10 9h2"/>
-              </svg>
-              <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No Active Scan Selected</h3>
-              <p style={{ fontSize: '0.85rem', maxWidth: '300px', margin: '0 auto', lineHeight: '1.5' }}>
-                Please select one of the clinical presets or upload a scan in the left panel to execute advanced AI diagnostics.
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Medical Report Analysis</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                AI-driven parsing of lab reports and clinical data. Extract critical vitals and trends from unstructured documents instantly.
               </p>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Modern Info Banner */}
+            {/* Capability Card 2 */}
+            <div className="glass-card neon-hover-teal" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'rgba(13, 242, 201, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(13, 242, 201, 0.2)'
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 3v18h18"/>
+                  <path d="m19 9-5 5-4-4-3 3"/>
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Symptom Assessment Engine</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                Real-time analysis of patient symptoms for triage. Prioritize urgent cases with ML-based precision based on historical clinical datasets.
+              </p>
+            </div>
+
+            {/* Capability Card 3 */}
+            <div className="glass-card neon-hover-teal" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '10px',
+                background: 'rgba(13, 242, 201, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(13, 242, 201, 0.2)'
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                  <path d="M2 12h20"/>
+                </svg>
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Multilingual Support</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+                Accessible healthcare diagnostics in multiple languages. Breaking language barriers to provide equitable diagnostic insights globally.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Security & Compliance Section */}
+        <section style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+          gap: '4rem',
+          alignItems: 'center'
+        }}>
+          {/* Left Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>
+              Rigorous Security & Compliance
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: 1.6 }}>
+              Our platform operates on a zero-trust architecture, ensuring patient data remains encrypted at rest and in transit. Fully HIPAA and GDPR compliant.
+            </p>
+
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: '1rem', listStyle: 'none' }}>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.95rem', fontWeight: 500 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="m9 12 2 2 4-4"/>
+                </svg>
+                End-to-End Encryption (AES-256)
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.95rem', fontWeight: 500 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="m9 12 2 2 4-4"/>
+                </svg>
+                SOC2 Type II Certified Processing
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.95rem', fontWeight: 500 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="m9 12 2 2 4-4"/>
+                </svg>
+                Real-Time Anomaly Detection Systems
+              </li>
+            </ul>
+          </div>
+
+          {/* Right Column (Interactive System Integrity mockup) */}
+          <div>
+            <div className="system-integrity-card" style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.4), 0 0 30px rgba(139, 92, 246, 0.08)' }}>
+              {/* Card Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+                  SYSTEM INTEGRITY
+                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '6px', height: '6px', backgroundColor: '#10b981', borderRadius: '50%', display: 'inline-block' }}></span>
+                  100% Secure
+                </span>
+              </div>
+
+              {/* Card Lines */}
+              <div className="system-lines">
+                <div className="system-line"></div>
+                <div className="system-line"></div>
+                <div className="system-line"></div>
+              </div>
+
+              {/* Bar Chart */}
+              <div className="system-chart">
+                <div className="chart-bar"></div>
+                <div className="chart-bar"></div>
+                <div className="chart-bar"></div>
+                <div className="chart-bar"></div>
+                <div className="chart-bar"></div>
+              </div>
+
+              {/* Corner Badge */}
+              <div style={{ position: 'absolute', bottom: '-12px', right: '16px' }}>
+                <span className="badge-pill-clinics">
+                  TRUSTED BY 100+ CLINICS
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
       <footer style={{
         marginTop: 'auto',
-        paddingTop: '3rem',
-        paddingBottom: '1.5rem',
         borderTop: '1px solid var(--border-color)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1.5rem',
-        fontSize: '0.8rem',
-        color: 'var(--text-muted)'
+        padding: '3rem 2rem 2rem 2rem',
+        backgroundColor: 'rgba(4, 6, 12, 0.95)'
       }}>
-        <div>
-          <p>© {new Date().getFullYear()} MediScan-Ai Diagnostics Inc. All rights reserved.</p>
-          <p style={{ marginTop: '4px' }}>Developed in compliance with ISO 13485 & HIPAA Security Rule standards.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '20px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary)' }}></span>
-            AES-256 Encrypted
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--primary)' }}></span>
-            FDA Class II Certified Pipeline
-          </span>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '2rem'
+        }}>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#060913" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+            </div>
+            <span style={{ fontSize: '1rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
+              MediScan<span className="cyan-gradient-text">AI</span>
+            </span>
+          </div>
+
+          {/* Links */}
+          <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
+            {['PLATFORM', 'SECURITY', 'CLINICAL ETHICS', 'CONTACT'].map((link) => (
+              <a
+                key={link}
+                href="#"
+                onClick={(e) => e.preventDefault()}
+                style={{
+                  color: 'var(--text-muted)',
+                  textDecoration: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  transition: 'var(--transition-smooth)'
+                }}
+                className="hover:text-white"
+              >
+                {link}
+              </a>
+            ))}
+          </div>
+
+          {/* Copyright */}
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 500 }}>
+            MediScanAI Diagnostics 2026
+          </div>
         </div>
       </footer>
-
-      {/* Global CSS keyframe adjustments for animations */}
-      <style jsx global>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.9); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }
