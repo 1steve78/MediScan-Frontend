@@ -33,9 +33,16 @@ export async function middleware(request: NextRequest) {
 
   // Verify user session securely against the Supabase database.
   // getUser() validates the JWT on the Supabase Auth server and does not require email confirmation.
+  console.log(`[MediScan-Ai Middleware] Intercepting request for path: ${request.nextUrl.pathname}`);
+  
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.warn(`[MediScan-Ai Middleware] Error fetching user session: ${userError.message}`);
+  }
 
   const path = request.nextUrl.pathname;
 
@@ -43,21 +50,38 @@ export async function middleware(request: NextRequest) {
   const isDashboardRoute = path.startsWith('/patient') || path.startsWith('/doctor');
   const isLoginRoute = path === '/login';
 
+  console.log(`[MediScan-Ai Middleware] Session State -> User: ${user ? user.email : 'None'}, Role: ${user?.user_metadata?.role || 'N/A'}, Path: ${path}`);
+
   if (!user && isDashboardRoute) {
+    console.log(`[MediScan-Ai Middleware] Unauthenticated user accessing protected dashboard. Redirecting to /login`);
     // Force unauthenticated requests back to the login gateway
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    
+    const redirectResponse = NextResponse.redirect(url);
+    // Persist refreshed tokens/session cookies across the redirect
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
   }
 
   if (user && isLoginRoute) {
-    // Seamless routing for active authenticated session
     const role = user.user_metadata?.role || 'patient';
+    console.log(`[MediScan-Ai Middleware] Authenticated user on /login. Redirecting seamlessly to /${role}`);
+    // Seamless routing for active authenticated session
     const url = request.nextUrl.clone()
     url.pathname = `/${role}`
-    return NextResponse.redirect(url)
+    
+    const redirectResponse = NextResponse.redirect(url);
+    // Persist refreshed tokens/session cookies across the redirect
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirectResponse;
   }
 
+  console.log(`[MediScan-Ai Middleware] Request allowed to proceed to: ${path}`);
   return supabaseResponse;
 }
 

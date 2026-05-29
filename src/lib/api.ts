@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+
+
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
@@ -21,6 +22,7 @@ export interface AnalyzeQueuedResponse {
 export interface TriageResponse {
   classification: 'low' | 'medium' | 'high' | 'critical';
   ai_insight: string;
+  required_specialty?: 'Cardiology' | 'Neurology' | 'Orthopedics' | 'Dermatology' | 'General Practice';
   status: string;
 }
 
@@ -75,9 +77,10 @@ export interface JobStatusResponse {
 // --- API COMMUNICATIONS FUNCTIONS ---
 
 /**
- * Uploads a raw medical report file (image/PDF) to Supabase Storage,
- * retrieves its public URL, and queues an event-driven analysis task 
- * on our FastAPI clinical backend.
+ * Uploads a raw medical report file (image/PDF) DIRECTLY to the FastAPI backend
+ * via multipart/form-data, bypassing Supabase Storage entirely.
+ * The backend reads the buffer in-memory, computes the SHA-256 hash,
+ * base64-encodes the image, and queues Gemini analysis asynchronously.
  */
 export async function uploadAndAnalyzeReport(
   file: File,
@@ -86,92 +89,39 @@ export async function uploadAndAnalyzeReport(
   symptoms: string = ''
 ): Promise<AnalyzeQueuedResponse> {
   try {
-    const fileExt = file.name.split('.').pop();
-    const uniqueFileName = `${generateUniqueId()}.${fileExt}`;
-    const filePath = `reports/${uniqueFileName}`;
-
-    console.log(`[MediScan-Ai API] Commencing upload of ${file.name} to Supabase bucket 'medical-records'...`);
-
-    /**
-     * Self-Healing Bucket Upload:
-     * Attempt the upload, and if the bucket is missing (Supabase error code 'Bucket not found'),
-     * auto-create it as a public bucket and retry once — no manual dashboard setup required.
-     */
-    const attemptUpload = async () =>
-      supabase.storage.from('medical-records').upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    let { data, error } = await attemptUpload();
-
-    if (error && (error.message?.includes('Bucket not found') || error.message?.includes('bucket') || (error as any)?.statusCode === 404 || (error as any)?.error === 'Bucket not found')) {
-      console.warn('[MediScan-Ai API] Bucket "medical-records" not found. Auto-creating public bucket...');
-      // Create the bucket — ignore error if it was already created by a concurrent request
-      const { error: bucketErr } = await supabase.storage.createBucket('medical-records', {
-        public: true,
-        fileSizeLimit: 52428800, // 50 MB
-        allowedMimeTypes: ['image/*', 'application/pdf'],
-      });
-      if (bucketErr && !bucketErr.message?.includes('already exists') && !bucketErr.message?.includes('duplicate')) {
-        console.warn('[MediScan-Ai API] Bucket creation warning (may already exist):', bucketErr.message);
-      } else {
-        console.log('[MediScan-Ai API] Bucket "medical-records" created successfully. Retrying upload...');
-      }
-      // Retry the upload after bucket creation
-      ({ data, error } = await attemptUpload());
-    }
-
-
-    if (error) {
-      throw new Error(`Supabase Storage upload failed: ${error.message}`);
-    }
-
-    console.log('[MediScan-Ai API] File uploaded successfully. Fetching public retrieval URL...');
-
-    // 2. Retrieve the public retrieval URL of that uploaded file
-    const { data: urlData } = supabase.storage
-      .from('medical-records')
-      .getPublicUrl(filePath);
-
-    const publicUrl = urlData.publicUrl;
-    console.log(`[MediScan-Ai API] Public retrieval URL resolved: ${publicUrl}`);
-
-    // Adopt frontend-provided job_id or generate one locally
     const targetJobId = jobId || generateUniqueId();
 
-    // 3. Make POST request to our FastAPI backend '/api/analyze-report'
-    const payload = {
-      file_url: publicUrl,
-      language: language,
-      job_id: targetJobId,
-      symptoms: symptoms
-    };
+    console.log(`[MediScan-Ai API] Sending "${file.name}" directly to FastAPI multipart endpoint (no Supabase Storage required)...`);
 
-    console.log('[MediScan-Ai API] Dispatching queue payload to FastAPI backend...', payload);
-    const response = await fetch(`${BACKEND_URL}/api/analyze-report`, {
+    // Build a multipart FormData payload — the backend reads this directly
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('job_id', targetJobId);
+    if (symptoms.trim()) {
+      formData.append('symptoms', symptoms.trim());
+    }
+
+    const response = await fetch(`${BACKEND_URL}/api/analyze-report/upload`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      // Do NOT set Content-Type manually — the browser sets it with the correct multipart boundary
+      body: formData,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`FastAPI clinical engine rejected upload: HTTP ${response.status} - ${errorText}`);
+      throw new Error(`FastAPI clinical engine rejected file upload: HTTP ${response.status} — ${errorText}`);
     }
 
     const result = await response.json();
-    console.log('[MediScan-Ai API] Background job successfully queued in backend:', result);
+    console.log('[MediScan-Ai API] Background job successfully queued via direct upload:', result);
     return result as AnalyzeQueuedResponse;
 
   } catch (error: any) {
     console.error('[MediScan-Ai API] Exception caught in uploadAndAnalyzeReport:', error);
-    // Prevent freezing UI by throwing a clean structured error message
     throw new Error(error.message || 'An error occurred during medical file processing.');
   }
 }
+
 
 /**
  * Submits patient symptoms text to the AI triage assessment router
