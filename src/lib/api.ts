@@ -62,7 +62,8 @@ export interface JobStatusResponse {
 export async function uploadAndAnalyzeReport(
   file: File,
   language: string = 'en',
-  jobId?: string
+  jobId?: string,
+  symptoms: string = ''
 ): Promise<AnalyzeQueuedResponse> {
   try {
     const fileExt = file.name.split('.').pop();
@@ -100,7 +101,8 @@ export async function uploadAndAnalyzeReport(
     const payload = {
       file_url: publicUrl,
       language: language,
-      job_id: targetJobId
+      job_id: targetJobId,
+      symptoms: symptoms
     };
 
     console.log('[MediScan-Ai API] Dispatching queue payload to FastAPI backend...', payload);
