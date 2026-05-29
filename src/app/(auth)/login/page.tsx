@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import Logo from '@/components/ui/Logo';
@@ -17,11 +17,11 @@ function PasswordInput({ label, placeholder, value, onChange, id }: PasswordInpu
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
-      <label htmlFor={id} style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
+    <div className="flex flex-col gap-1.5 w-full">
+      <label htmlFor={id} className="text-zinc-350 text-xs font-semibold tracking-wide">
         {label}
       </label>
-      <div style={{ position: 'relative' }}>
+      <div className="relative w-full">
         <input 
           id={id}
           type={showPassword ? 'text' : 'password'} 
@@ -29,47 +29,22 @@ function PasswordInput({ label, placeholder, value, onChange, id }: PasswordInpu
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required
-          style={{
-            background: 'var(--surface2)',
-            border: '1px solid var(--border)',
-            borderRadius: '10px',
-            padding: '0.85rem 3rem 0.85rem 1rem',
-            color: '#ffffff',
-            fontSize: '0.95rem',
-            outline: 'none',
-            width: '100%',
-            transition: 'var(--transition-smooth)'
-          }}
-          className="focus:border-[var(--cyan)]"
+          className="input-field"
         />
         <button 
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          style={{
-            position: 'absolute',
-            right: '1rem',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          className="hover:text-white"
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors flex items-center justify-center"
         >
           {showPassword ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
               <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
               <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
               <line x1="2" x2="22" y1="2" y2="22"/>
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 0 0 1 .696 10.75 10.75 0 0 1-19.876 0z"/>
               <circle cx="12" cy="12" r="3"/>
             </svg>
@@ -95,6 +70,22 @@ export default function LoginPage() {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupRole, setSignupRole] = useState<'patient' | 'doctor'>('patient');
+
+  // Tongue Twisters state
+  const [activeTwisterIdx, setActiveTwisterIdx] = useState(0);
+  const tongueTwisters = [
+    { title: "Scan Diagnostics", text: "Six slick silent scans swiftly segment suspect cerebral anomalies, while critical triage checks clinically clean chest charts!" },
+    { title: "Vitals Validation", text: "Vigilant vitals validation vitally verifies volatile venous vectors, processing pathology parameters with prompt precision!" },
+    { title: "Physician Portal", text: "Dashing doctors dynamically detailing diagnoses, detailing difficult disease data, archiving active ailments on automated triage trackers!" },
+    { title: "HIPAA Shielding", text: "Seven sealed SEC-compliant sockets safely secure sensitive symptoms, shielding surgical sheets from suspicious snoopers!" }
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTwisterIdx((prev) => (prev + 1) % tongueTwisters.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,10 +150,8 @@ export default function LoginPage() {
       if (data.user) {
         console.log(`[MediScan-Ai Auth] Supabase sign-up successful for: ${signupName}`);
         if (data.session) {
-          // If email verification is disabled in Supabase, we are logged in immediately.
           window.location.href = `/${signupRole}`;
         } else {
-          // If email verification is enabled in Supabase settings
           setAuthError('Registration successful! Please confirm your email (if required by your Supabase provider), or try logging in now.');
           setIsLoading(false);
         }
@@ -173,582 +162,512 @@ export default function LoginPage() {
     }
   };
 
+  const handleOAuthLogin = async (provider: 'google' | 'apple') => {
+    setAuthError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/patient'
+        }
+      });
+      if (error) setAuthError(error.message);
+    } catch (err: any) {
+      setAuthError(err.message || 'OAuth initiation failed.');
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-4" style={{ backgroundColor: 'var(--bg)' }}>
-      {/* CSS Stylesheet Injected safely for Next.js compilation */}
+    <div className="login-page-container">
+      
+      {/* CSS Layout variables lock for Non-scrollable Viewport */}
       <style dangerouslySetInnerHTML={{ __html: `
-        :root {
-          --bg:        #04080f;
-          --bg2:       #080e1a;
-          --surface:   #0c1424;
-          --surface2:  #101c30;
-          --border:    rgba(0,190,255,0.12);
-          --cyan:      #00c8ff;
-          --cyan-dim:  rgba(0,200,255,0.18);
-          --cyan-glow: rgba(0,200,255,0.35);
-          --green:     #00ffb2;
-          --purple:    #9b5cff;
-          --text:      #e8f4ff;
-          --text-muted:#7a9ab8;
-          --radius:    14px;
+        .login-page-container {
+          background-color: #04080f;
+          height: 100vh;
+          min-height: 100vh;
+          max-height: 100vh;
+          width: 100%;
+          position: relative;
+          display: flex;
+          flex-direction: row;
+          overflow: hidden;
+          font-family: var(--font-sans);
+          box-sizing: border-box;
         }
-
-        body::before {
-          content:'';
-          position:fixed; inset:0;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-          pointer-events:none; z-index:0; opacity:.4;
-        }
-
+        
         .grid-bg {
-          position:absolute; inset:0; overflow:hidden; pointer-events:none;
+          position: absolute;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
           background-image:
-            linear-gradient(rgba(0,200,255,.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,200,255,.04) 1px, transparent 1px);
+            linear-gradient(rgba(0, 200, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 200, 255, 0.03) 1px, transparent 1px);
           background-size: 48px 48px;
+          z-index: 1;
+        }
+        
+        .bg-glow-container {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          pointer-events: none;
+          overflow: hidden;
         }
 
-        .logo-dot {
-          width:8px; height:8px; border-radius:50%;
-          background:var(--cyan);
-          box-shadow:0 0 10px var(--cyan);
-          animation: pulse-dot 2s ease-in-out infinite;
+        .glow-orb-1 {
+          position: absolute;
+          top: -10%;
+          right: -10%;
+          width: 600px;
+          height: 600px;
+          background: radial-gradient(circle, rgba(0, 200, 255, 0.06) 0%, transparent 70%);
+          filter: blur(80px);
         }
 
-        @keyframes pulse-dot {
-          0%,100%{opacity:1;transform:scale(1)}
-          50%{opacity:.5;transform:scale(.7)}
+        .glow-orb-2 {
+          position: absolute;
+          bottom: -10%;
+          left: -10%;
+          width: 500px;
+          height: 500px;
+          background: radial-gradient(circle, rgba(155, 92, 255, 0.06) 0%, transparent 70%);
+          filter: blur(80px);
+        }
+
+        .left-panel {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+          position: relative;
+          z-index: 10;
+          box-sizing: border-box;
+        }
+
+        .right-panel {
+          display: none;
+          width: 100%;
+          height: 100%;
+          flex-direction: column;
+          justify-content: center;
+          padding: 4rem;
+          position: relative;
+          z-index: 10;
+          border-left: 1px solid rgba(255, 255, 255, 0.04);
+          background: rgba(255, 255, 255, 0.01);
+          box-sizing: border-box;
+        }
+
+        @media (min-width: 1024px) {
+          .left-panel {
+            width: 50%;
+            padding-left: 7%;
+            justify-content: flex-start;
+          }
+          .right-panel {
+            display: flex;
+            width: 50%;
+          }
+        }
+        
+        .glass-card {
+          background: rgba(12, 20, 36, 0.65);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 24px;
+          width: 100%;
+          max-width: 410px;
+          padding: 2.25rem;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+          display: flex;
+          flex-direction: column;
+          gap: 1.15rem;
+          box-sizing: border-box;
+        }
+        
+        .input-field {
+          width: 100%;
+          height: 44px;
+          border-radius: 8px;
+          padding: 0 1.25rem;
+          background: #ffffff;
+          color: #0f172a;
+          font-weight: 700;
+          font-size: 0.9rem;
+          border: 1px solid transparent;
+          outline: none;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+        }
+        
+        .input-field:focus {
+          border-color: #00e5ff;
+          box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+        }
+        
+        .input-field::placeholder {
+          color: #94a3b8;
+          font-weight: 600;
+        }
+        
+        .social-btn {
+          height: 44px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+          cursor: pointer;
+        }
+        
+        .submit-btn {
+          width: 100%;
+          height: 46px;
+          background: #00e5ff;
+          color: #020617;
+          font-weight: 800;
+          font-size: 0.9rem;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          box-shadow: 0 0 15px rgba(0, 229, 255, 0.25);
+          transition: all 0.2s ease;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+        
+        .submit-btn:hover {
+          background: #00d4ec;
+          box-shadow: 0 0 25px rgba(0, 229, 255, 0.45);
+          transform: translateY(-1px);
+        }
+
+        .twister-card {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          border-radius: 16px;
+          padding: 1.75rem;
+          box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        @keyframes slideFade {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-slide-fade {
+          animation: slideFade 0.4s ease-out forwards;
         }
       ` }} />
 
-      {/* Grid background matching landing page */}
+      {/* Grid background & Glowing orbs from original design */}
       <div className="grid-bg"></div>
-
-      {/* Background Orbs */}
-      <div className="bg-glow-container" style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+      <div className="bg-glow-container">
         <div className="glow-orb-1"></div>
         <div className="glow-orb-2"></div>
       </div>
 
-      {/* Main Login Flow Container */}
-      <div style={{
-        width: '100%',
-        maxWidth: '420px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2rem',
-        padding: '2rem 0',
-        zIndex: 1
-      }}>
+      {/* --- Column 1: Left Form Panel --- */}
+      <div className="left-panel">
         
-        {/* Header Logo */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, var(--cyan) 0%, #0076ff 100%)',
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 15px var(--cyan-glow)'
-          }}>
-            <Logo size={18} className="text-[#060913]" />
-          </div>
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#ffffff' }}>
-            MediScan <span style={{ color: 'var(--cyan)' }}>AI</span>
-          </span>
-        </div>
-
-        {/* View Switcher: Sign Up View vs Log In View */}
-        {isSignUp ? (
-          /* Sign Up Form */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', fontFamily: 'Syne, sans-serif' }}>
-                Create your account
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
-                Sign up to start accessing AI diagnostics and health reports
-              </p>
+        <div className="glass-card">
+          {/* Welcome Row */}
+          <div className="flex justify-between items-start w-full">
+            <div className="flex items-center gap-1.5">
+              <Logo size={16} className="text-[#00e5ff]" />
+              <span className="text-xs text-zinc-300 font-semibold tracking-wide">
+                Welcome to <span className="text-[#00e5ff] font-bold">MediScan AI</span>
+              </span>
             </div>
+            
+            <div className="text-right flex flex-col items-end">
+              <span className="text-[10px] text-zinc-400 leading-none">
+                {isSignUp ? 'Have account?' : 'No Account?'}
+              </span>
+              <button 
+                type="button"
+                onClick={() => { setIsSignUp(!isSignUp); setAuthError(null); }}
+                className="text-[10px] text-[#00e5ff] font-extrabold hover:underline mt-0.5"
+              >
+                {isSignUp ? 'Sign in' : 'Sign up'}
+              </button>
+            </div>
+          </div>
 
-            {authError && (
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                borderRadius: '10px',
-                padding: '0.85rem 1rem',
-                color: '#ff6b6b',
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                lineHeight: '1.4',
-                textAlign: 'left'
-              }}>
-                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  Authentication Error
-                </div>
-                <div>{authError}</div>
+          {/* Title */}
+          <h2 className="text-3xl font-extrabold text-white tracking-tight -mt-1">
+            {isSignUp ? 'Sign up' : 'Sign in'}
+          </h2>
+
+          {/* OAuth Buttons Row */}
+          <div className="flex items-center w-full">
+            {/* Google OAuth */}
+            <button 
+              type="button"
+              onClick={() => handleOAuthLogin('google')}
+              disabled={isLoading}
+              className="social-btn flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-zinc-800 font-bold text-xs px-4 w-full cursor-pointer"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 text-zinc-500 text-[10px] font-extrabold tracking-widest my-0.5 w-full">
+            <div className="h-px bg-white/[0.08] flex-1"></div>
+            <span>OR</span>
+            <div className="h-px bg-white/[0.08] flex-1"></div>
+          </div>
+
+          {/* Authentication Form Error Alert */}
+          {authError && (
+            <div className="bg-red-500/10 border border-red-500/25 rounded-lg p-3 text-xs text-red-400 leading-normal">
+              <div className="font-bold flex items-center gap-1.5 mb-1 text-red-500">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                Error
               </div>
-            )}
+              <div>{authError}</div>
+            </div>
+          )}
 
-            <form onSubmit={handleSignupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Views Switcher: Sign Up Form vs Sign In Form */}
+          {isSignUp ? (
+            /* Sign Up Form */
+            <form onSubmit={handleSignupSubmit} className="flex flex-col gap-3.5">
+              
               {/* Full Name input */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="signup-name" style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
+              <div className="flex flex-col gap-1.5 w-full">
+                <label htmlFor="signup-name" className="text-zinc-350 text-xs font-semibold tracking-wide">
                   Full Name
                 </label>
                 <input 
                   id="signup-name"
                   type="text" 
-                  placeholder="Your Name" 
+                  placeholder="Full Name" 
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
                   required
                   disabled={isLoading}
-                  style={{
-                    background: 'var(--surface2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '0.85rem 1rem',
-                    color: '#ffffff',
-                    fontSize: '0.95rem',
-                    outline: 'none',
-                    transition: 'var(--transition-smooth)',
-                    opacity: isLoading ? 0.7 : 1
-                  }}
-                  className="focus:border-[var(--cyan)]"
+                  className="input-field"
                 />
               </div>
 
-              {/* Role Segmented Selector */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
-                  Register As
+              {/* Role Select Segment */}
+              <div className="flex flex-col gap-1.5 w-full">
+                <span className="text-zinc-350 text-xs font-semibold tracking-wide">
+                  Registering as
                 </span>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  background: 'var(--surface2)',
-                  padding: '4px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border)'
-                }}>
+                <div className="grid grid-cols-2 bg-white/[0.05] border border-white/[0.08] p-1 rounded-lg">
                   <button
                     type="button"
                     onClick={() => setSignupRole('patient')}
-                    disabled={isLoading}
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: signupRole === 'patient' ? 'linear-gradient(135deg, var(--cyan), #0076ff)' : 'transparent',
-                      color: signupRole === 'patient' ? '#020811' : '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: isLoading ? 'not-allowed' : 'pointer',
-                      transition: 'var(--transition-smooth)'
-                    }}
+                    className={`py-2 text-xs font-bold rounded transition-all cursor-pointer ${
+                      signupRole === 'patient' 
+                        ? 'bg-[#00e5ff] text-zinc-950 shadow-md' 
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
                   >
                     Patient
                   </button>
                   <button
                     type="button"
                     onClick={() => setSignupRole('doctor')}
-                    disabled={isLoading}
-                    style={{
-                      padding: '0.6rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: signupRole === 'doctor' ? 'linear-gradient(135deg, var(--cyan), #0076ff)' : 'transparent',
-                      color: signupRole === 'doctor' ? '#020811' : '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: isLoading ? 'not-allowed' : 'pointer',
-                      transition: 'var(--transition-smooth)'
-                    }}
+                    className={`py-2 text-xs font-bold rounded transition-all cursor-pointer ${
+                      signupRole === 'doctor' 
+                        ? 'bg-[#00e5ff] text-zinc-950 shadow-md' 
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
                   >
                     Doctor
                   </button>
                 </div>
               </div>
 
-              {/* Email input */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="signup-email" style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
+              {/* Email Address */}
+              <div className="flex flex-col gap-1.5 w-full">
+                <label htmlFor="signup-email" className="text-zinc-350 text-xs font-semibold tracking-wide">
                   Email Address
                 </label>
                 <input 
                   id="signup-email"
                   type="email" 
-                  placeholder="Email Address" 
+                  placeholder="email@example.com" 
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  style={{
-                    background: 'var(--surface2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '0.85rem 1rem',
-                    color: '#ffffff',
-                    fontSize: '0.95rem',
-                    outline: 'none',
-                    transition: 'var(--transition-smooth)',
-                    opacity: isLoading ? 0.7 : 1
-                  }}
-                  className="focus:border-[var(--cyan)]"
+                  className="input-field"
                 />
               </div>
 
-              {/* Password */}
+              {/* Passwords */}
               <PasswordInput 
                 id="signup-password"
-                label="Password"
-                placeholder="••••••••"
+                label="Enter Password"
+                placeholder="Password"
                 value={signupPassword}
-                onChange={setSignupPassword}
+                onChange={signupPassword => setSignupPassword(signupPassword)}
               />
 
-              {/* Confirm Password */}
               <PasswordInput 
                 id="signup-confirm-password"
                 label="Confirm Password"
-                placeholder="••••••••"
+                placeholder="Confirm Password"
                 value={signupConfirmPassword}
-                onChange={setSignupConfirmPassword}
+                onChange={signupConfirmPassword => setSignupConfirmPassword(signupConfirmPassword)}
               />
 
               {/* Submit button */}
               <button 
                 type="submit" 
-                className="btn-primary" 
                 disabled={isLoading}
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '0.9rem',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, var(--cyan), #0076ff)',
-                  boxShadow: '0 4px 15px var(--cyan-glow)',
-                  marginTop: '0.5rem',
-                  opacity: isLoading ? 0.7 : 1,
-                  cursor: isLoading ? 'not-allowed' : 'pointer'
-                }}
+                className="submit-btn mt-1"
               >
-                {isLoading ? 'Creating Account...' : 'Sign up'}
+                {isLoading ? 'Creating...' : 'Sign up'}
               </button>
             </form>
-
-            {/* Footer switcher */}
-            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Already have an account?{' '}
-              <button 
-                onClick={() => { setIsSignUp(false); setAuthError(null); }}
-                disabled={isLoading}
-                style={{ 
-                  color: 'var(--cyan)', 
-                  background: 'none', 
-                  border: 'none', 
-                  fontWeight: 700, 
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  padding: 0
-                }}
-                className="hover:underline"
-              >
-                Log in
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Login Form */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h2 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', fontFamily: 'Syne, sans-serif' }}>
-                Assess your health
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>
-                Login to Access Health Reports and Identify the Illness
-              </p>
-            </div>
-
-            {authError && (
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                borderRadius: '10px',
-                padding: '0.85rem 1rem',
-                color: '#ff6b6b',
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                lineHeight: '1.4',
-                textAlign: 'left'
-              }}>
-                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  Authentication Error
-                </div>
-                <div>{authError}</div>
-                {authError.toLowerCase().includes('credential') && (
-                  <div style={{
-                    marginTop: '4px',
-                    paddingTop: '6px',
-                    borderTop: '1px solid rgba(239, 68, 68, 0.15)',
-                    fontSize: '0.75rem',
-                    color: 'var(--text-secondary)'
-                  }}>
-                    <strong style={{ color: 'var(--cyan)' }}>Developer Tip:</strong> Ensure this user is registered in your Supabase project. If email confirmation is enabled, click the link in the sign-up verification email or disable <em>"Confirm email"</em> in <strong>Supabase Dashboard &gt; Authentication &gt; Providers &gt; Email</strong>.
-                  </div>
-                )}
-              </div>
-            )}
-
-            <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          ) : (
+            /* Sign In Form (Default) */
+            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-3.5">
+              
               {/* Email input */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label htmlFor="login-email" style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontWeight: 700, letterSpacing: '0.03em' }}>
-                  Email Address
+              <div className="flex flex-col gap-1.5 w-full">
+                <label htmlFor="login-email" className="text-zinc-350 text-xs font-semibold tracking-wide">
+                  Enter your username or email address
                 </label>
                 <input 
                   id="login-email"
-                  type="text" 
-                  placeholder="Email Address" 
+                  type="email" 
+                  placeholder="Username or email address" 
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  style={{
-                    background: 'var(--surface2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '10px',
-                    padding: '0.85rem 1rem',
-                    color: '#ffffff',
-                    fontSize: '0.95rem',
-                    outline: 'none',
-                    transition: 'var(--transition-smooth)',
-                    opacity: isLoading ? 0.7 : 1
-                  }}
-                  className="focus:border-[var(--cyan)]"
+                  className="input-field"
                 />
               </div>
 
               {/* Password input */}
-              <div>
+              <div className="flex flex-col w-full">
                 <PasswordInput 
                   id="login-password"
-                  label="Password"
-                  placeholder="••••••••"
+                  label="Enter your Password"
+                  placeholder="Password"
                   value={loginPassword}
-                  onChange={setLoginPassword}
+                  onChange={loginPassword => setLoginPassword(loginPassword)}
                 />
                 
-                {/* Forgot password */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                  <Link 
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); alert('Reset password link simulation.'); }}
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--cyan)',
-                      textDecoration: 'none',
-                      fontWeight: 600
-                    }}
-                    className="hover:underline"
-                  >
-                    Forgot Password?
-                  </Link>
-                </div>
+                {/* Forget Password */}
+                <button 
+                  type="button" 
+                  onClick={() => alert('Password reset flow simulated.')}
+                  className="text-[11px] text-[#00e5ff] hover:text-[#00ccf0] mt-2 font-bold self-end transition-colors cursor-pointer hover:underline"
+                >
+                  Forget Password
+                </button>
               </div>
 
               {/* Submit button */}
               <button 
                 type="submit" 
-                className="btn-primary" 
                 disabled={isLoading}
-                style={{
-                  width: '100%',
-                  justifyContent: 'center',
-                  padding: '0.9rem',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, var(--cyan), #0076ff)',
-                  boxShadow: '0 4px 15px var(--cyan-glow)',
-                  opacity: isLoading ? 0.7 : 1,
-                  cursor: isLoading ? 'not-allowed' : 'pointer'
-                }}
+                className="submit-btn mt-1"
               >
-                {isLoading ? 'Verifying...' : 'Log in'}
+                {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </form>
+          )}
 
-            {/* OR Separator */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              color: 'var(--text-muted)',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              margin: '0.5rem 0'
-            }}>
-              <div style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></div>
-              <span>OR LOGIN WITH</span>
-              <div style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></div>
+          {/* Rotating Triage Twister Ticker (Visible on Mobile & Desktop card bottom) */}
+          <div className="bg-white/[0.015] border border-white/[0.05] rounded-xl p-3 flex flex-col gap-1 transition-all duration-300 mt-2 shrink-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00e5ff] animate-pulse" />
+                Triage Twister: {tongueTwisters[activeTwisterIdx].title}
+              </span>
+              <span className="text-[9px] font-bold text-zinc-500">
+                {activeTwisterIdx + 1} / {tongueTwisters.length}
+              </span>
             </div>
-
-            {/* Social Authentication */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <button 
-                onClick={async () => {
-                  setAuthError(null);
-                  try {
-                    const { error } = await supabase.auth.signInWithOAuth({
-                      provider: 'google',
-                      options: {
-                        redirectTo: window.location.origin + '/patient'
-                      }
-                    });
-                    if (error) setAuthError(error.message);
-                  } catch (err: any) {
-                    setAuthError(err.message || 'OAuth initiation failed.');
-                  }
-                }}
-                disabled={isLoading}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '0.8rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface2)',
-                  color: '#ffffff',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'var(--transition-smooth)'
-                }}
-                className="hover:bg-[rgba(255,255,255,0.03)]"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                </svg>
-                Google
-              </button>
-              
-              <button 
-                onClick={async () => {
-                  setAuthError(null);
-                  try {
-                    const { error } = await supabase.auth.signInWithOAuth({
-                      provider: 'apple',
-                      options: {
-                        redirectTo: window.location.origin + '/patient'
-                      }
-                    });
-                    if (error) setAuthError(error.message);
-                  } catch (err: any) {
-                    setAuthError(err.message || 'OAuth initiation failed.');
-                  }
-                }}
-                disabled={isLoading}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '0.8rem',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface2)',
-                  color: '#ffffff',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'var(--transition-smooth)'
-                }}
-                className="hover:bg-[rgba(255,255,255,0.03)]"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.63.73-1.18 1.87-1.03 2.98 1.12.09 2.27-.56 2.98-1.42Z"/>
-                </svg>
-                Apple
-              </button>
-            </div>
-
-            {/* Footer switcher */}
-            <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Don't have an account?{' '}
-              <button 
-                onClick={() => { setIsSignUp(true); setAuthError(null); }}
-                disabled={isLoading}
-                style={{ 
-                  color: 'var(--cyan)', 
-                  background: 'none', 
-                  border: 'none', 
-                  fontWeight: 700, 
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  padding: 0
-                }}
-                className="hover:underline"
-              >
-                Sign up
-              </button>
-            </div>
+            <p className="text-xs text-zinc-300 italic leading-relaxed transition-all duration-300">
+              "{tongueTwisters[activeTwisterIdx].text}"
+            </p>
           </div>
-        )}
 
-        {/* AI Diagnostics Banner Card */}
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '16px',
-          padding: '1.5rem',
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#ffffff', fontFamily: 'Syne, sans-serif' }}>
-            Clinical Intelligence
-          </h4>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', lineHeight: 1.5, zIndex: 1, maxWidth: '80%' }}>
-            Our AI analyzes radiological image parameters and clinical symptoms to provide high-fidelity triage assessment recommendations.
-          </p>
-
-          {/* SVG gear brain logo absolute positioned in the bottom right corner */}
-          <div style={{
-            position: 'absolute',
-            right: '-10px',
-            bottom: '-10px',
-            color: 'rgba(0, 200, 255, 0.05)',
-            zIndex: 0
-          }}>
-            <Logo size={90} className="text-cyan-400 opacity-10" />
-          </div>
         </div>
-
       </div>
+
+      {/* --- Column 2: Right Features Panel (Desktop Only, Rotating Feature Show) --- */}
+      <div className="right-panel">
+        <div className="max-w-[480px] flex flex-col gap-10">
+          
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[#00e5ff]">
+              <Logo size={22} />
+              <span className="text-xs font-bold uppercase tracking-widest">Platform Capabilities</span>
+            </div>
+            <h1 className="text-4xl font-extrabold text-white tracking-tight leading-tight">
+              Clinical Diagnostic <br />
+              <span className="text-[#00e5ff]">Intelligence Features</span>
+            </h1>
+            <p className="text-sm text-zinc-400 leading-relaxed font-light">
+              Read through our automated platform diagnostic features, formulated in tongue-twisting flows to test your focus.
+            </p>
+          </div>
+
+          {/* Active Rotating Tongue Twister Card */}
+          <div 
+            key={activeTwisterIdx} 
+            className="twister-card flex gap-5 items-start animate-slide-fade"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#00e5ff]/10 flex items-center justify-center text-[#00e5ff] font-extrabold text-lg shrink-0 mt-1">
+              0{activeTwisterIdx + 1}
+            </div>
+            <div className="space-y-2.5">
+              <h4 className="text-lg font-bold text-white tracking-tight">
+                {tongueTwisters[activeTwisterIdx].title}
+              </h4>
+              <p className="text-sm text-zinc-300 italic leading-relaxed font-medium">
+                "{tongueTwisters[activeTwisterIdx].text}"
+              </p>
+            </div>
+          </div>
+
+          {/* Indicator Navigation dots */}
+          <div className="flex items-center gap-2">
+            {tongueTwisters.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveTwisterIdx(idx)}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  activeTwisterIdx === idx 
+                    ? 'w-6 bg-[#00e5ff]' 
+                    : 'w-2 bg-white/20 hover:bg-white/40'
+                }`}
+                aria-label={`Go to slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+
+        </div>
+      </div>
+
     </div>
   );
 }
